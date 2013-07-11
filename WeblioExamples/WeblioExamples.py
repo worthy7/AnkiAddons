@@ -9,8 +9,6 @@ import re
 from aqt import mw
 from anki.hooks import addHook
 from japanese.reading import mecab
-import sys
-import re
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import collections
@@ -236,8 +234,6 @@ def onFocusLost(flag, note, fidx):
             mecab = None
             raise
     
-    
-    
         #next get info
     #check if the fields exist
     dst = None
@@ -254,11 +250,8 @@ def onFocusLost(flag, note, fidx):
             raise
     return True
     
-    #return flag
 
 def makeQuestions(term, sentence):
-    #sys.stderr.write("Trying to search on: " +term)
-    #sys.stderr.write("\n" + sentence)
     return re.sub(term, "___", sentence)
     
     

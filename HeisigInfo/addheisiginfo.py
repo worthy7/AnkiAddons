@@ -3,22 +3,17 @@
 # License: GNU GPL, version 3 or later; http://www.gnu.org/copyleft/gpl.html
 #
 #
-# Adding of Heisig Keywords - to the "Keywords" field
+# Adding of Heisig Keywords - to the "Kanji Keywords" field
 # Adding of Heisig Numbers - to the "Heisig Number" field
-#
+# Adding of Maximum Heisig Numbers - to the "Heisig Number" field
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 from anki.hooks import addHook
-import os
-import re
-from anki.utils import stripHTML, isWin, isMac
-
+import os, re
+from anki.utils import stripHTML
 # import the main window object (mw) from ankiqt
 from aqt import mw
-from aqt.utils import showInfo
-import sys
-import codecs
 
 #version they want to use, 2010 or old
 
@@ -28,8 +23,8 @@ allRTK = os.path.join(this_dir, "RTK.tsv")
 
 #RTK data goes here
 kanjiIndex = dict()
-                    
 
+#this is annoyingly useful
 joinseparator = ','
 
 #Fields used
@@ -38,6 +33,7 @@ expField = 'Expression'
 #out
 kanjiDstField = 'Kanji Keywords'
 heisigNumDstField = 'Heisig Number'
+
 #Default Heisig version to use
 heisigVersion = '2010'
 
@@ -59,8 +55,8 @@ def getHeisigVersion():
     hDialog.setText("Would you like to use the numbering from RTK-1 6th edition, or an older edition?")
     hDialog.setInformativeText("The 6th edition will use numbers from 1-2200. Older versions are missing some kanji and so the supplemented extra kanji numbers (e.g. 265A) will be used instead or the RTK3 book. Choose according to which edition of the RTK-1 book you will be referencing.")
 
-    yButton = hDialog.addButton("6th Edition", QMessageBox.AcceptRole)
-    nButton = hDialog.addButton("Older Edition",QMessageBox.RejectRole)
+    hDialog.addButton("6th Edition", QMessageBox.AcceptRole)
+    hDialog.addButton("Older Edition",QMessageBox.RejectRole)
     hDialog.setStandardButtons(QMessageBox.Cancel);
     
     
