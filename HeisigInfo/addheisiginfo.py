@@ -72,7 +72,7 @@ def getHeisigVersion():
         version = "old"
         #sys.stderr.write("reject" + str(ret))
     elif ret == QMessageBox.Cancel:
-        hDialog.close()
+        return False
         
     return version
 
@@ -95,6 +95,9 @@ def addHeisigNumbers(nids):
     #get version to use
     
     version = getHeisigVersion()
+    if version == False:
+        return
+    
     
     fields = []
     
@@ -322,21 +325,7 @@ def doNote(note, expF=None , kanjiDField=None):
         note[kanjiDstField] = result 
     
     
-    #add splits of 6
-    try:
-        if 'Kanji Keyword 1' in note:
-            kanjis = re.findall(ur'[\u4e00-\u9fbf]',srcTxt)
-            note['Kanji Removed All'] = re.sub(ur'[\u4e00-\u9fbf]', '_',srcTxt)
-            count = 1
-            
-            for k in kanjis:
-                if note['Kanji Keyword ' + str(count)] != k or note['Kanji Removed ' + str(count)] != re.sub(k, '_', srcTxt):
-                    changed = 1 
-                note['Kanji Keyword ' + str(count)] = k
-                note['Kanji Removed ' + str(count)] = re.sub(k, '_', srcTxt)
-                count = count + 1
-    except:
-        pass
+   
     
     if changed == 1:
         return True

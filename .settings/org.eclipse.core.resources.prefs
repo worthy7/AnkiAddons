@@ -28,3 +28,6 @@ encoding//Anki-working/aqt/overview.py=utf-8
 encoding//Anki-working/aqt/progress.py=utf-8
 encoding//Anki-working/aqt/reviewer.py=utf-8
 encoding//Anki-working/aqt/webview.py=utf-8
+encoding//HeisigInfo/addheisiginfo.py=utf-8
+encoding//JDict/fromJdict.py=utf-8
+encoding//KanjiSplits/kanjiSplitter.py=utf-8
