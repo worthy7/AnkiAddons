@@ -188,7 +188,11 @@ def addMostDifficultHeisigNumber(nids):
         if not srcTxt.strip():
             continue
         #Add the data to the dst field
-        num = max((map(int, lookupKanjiInfo(srcTxt, 'heisig2010'))))
+        try:
+            num = max((map(int, lookupKanjiInfo(srcTxt, 'heisig2010'))))
+        except ValueError:
+            # EAFP treatment of the no known kanji in the srcTxt case.
+            continue
         note[dst] = str(num)
         #sys.stderr.write("Results:" + note[dst])
         note.flush()
