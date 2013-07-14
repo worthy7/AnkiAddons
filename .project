@@ -14,4 +14,10 @@
 	<natures>
 		<nature>org.python.pydev.pythonNature</nature>
 	</natures>
+	<variableList>
+		<variable>
+			<name>AnkiAddonsFolder</name>
+			<value>file:/G:/Documents/Anki/addons</value>
+		</variable>
+	</variableList>
 </projectDescription>

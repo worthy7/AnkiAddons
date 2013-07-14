@@ -132,10 +132,12 @@ def doNote(note, isBulk=0):
         #Insert results
         if results[1]:
             reading = "[" + results[1] + "]"
-        
-        if note[definitionField] != results[2] \
-        or (note[dictionaryForm] != results[0] + reading):
             
+            
+        if note[definitionField] != results[2] \
+        or (note[dictionaryForm] != results[0] + reading) \
+        or (note[expField] != results[0]):
+            note[expField] = results[0]   
             note[definitionField] = results[2]
             note[dictionaryForm] = results[0] + reading
             
