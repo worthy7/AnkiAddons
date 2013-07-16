@@ -4,6 +4,7 @@
 #anki/python stuff
 from aqt import mw
 from aqt.utils import showCritical, showInfo, showWarning, tooltip
+from anki.utils import stripHTML
 from anki.hooks import addHook, wrap
 
 from PyQt4.QtCore import *
@@ -26,7 +27,7 @@ except:
 this_dir, this_filename = os.path.split(__file__)
 databasePath = os.path.join(this_dir, "edict.db") 
 edictPath = os.path.join(this_dir, "edict_freq.txt") 
-
+ignorePath = os.path.join(this_dir, "ignoredList.txt")
 
 class WordSuggestor(QtGui.QWidget):
     
@@ -37,6 +38,10 @@ class WordSuggestor(QtGui.QWidget):
         #kanjiCards
         self.knownKanjiCardIDs = []
         
+        #ignored words
+        self.ignoredWords = dict()
+        self.loadIgnoredWords()
+        
         #list using kanji as keys
         self.knownKanjis = []
         
@@ -46,8 +51,6 @@ class WordSuggestor(QtGui.QWidget):
         #normal list to use and exclude from database searches (words as keys)
         self.knownWords = []
         
-        #might use a flat file for ignored words
-        self.ignoredWords = []
         
         
         #Do initial search
@@ -235,11 +238,11 @@ class WordSuggestor(QtGui.QWidget):
         return
         
     def onKanjiComboBox(self):
-        self.getKanjiList()
+        
         return
     
     def onWordComboBox(self):
-        self.getWordList()
+        
         return
     
     def getKanjiCardFields(self):
@@ -331,14 +334,34 @@ class WordSuggestor(QtGui.QWidget):
     
     def onIgnore(self):
         #set ignore flag
+        self.resultsList.takeItem(self.resultsList.currentRow())
+        ignoreWord = self.resultsList.currentItem().word
+        self.ignoredWords[ignoreWord] = True
         #open file and append the word
+        with open(ignorePath, 'a') as ignoreFile:
+            ignoreFile.write(ignoreWord+'\n')
+            
         #load word into ignored list
         #refresh the search/remove from list
         return
     
+    def loadIgnoredWords(self):
+        #open file
+        self.ignoredWords = dict()
+        with open(ignorePath) as ignoreFile:
+            ignoreFromFile = ignoreFile.read().splitlines()
+            
+        for w in ignoreFromFile:
+            self.ignoredWords[w] = True
+            
+        print "Ignored Words:"
+        for kk in self.ignoredWords.keys():
+            print '#'+kk+'#'
+        
     def onSearch(self):
         #search and populate the list
-        
+        self.getWordList()
+        self.getKanjiList()
         
         print self.knownKanjis
         
@@ -373,6 +396,7 @@ class WordSuggestor(QtGui.QWidget):
         
         for i in results:
             item = QListWidgetItem(i[0] + '[' + i[1] + ']: ' + i[2])
+            item.word = i[0]
             self.resultsList.addItem(item)
             
         return
