@@ -13,10 +13,10 @@ from PyQt4.QtGui import *
 import csv
 import os
 import sys
-import apsw
 import sqlite3
 import re
 import pickle
+import codecs
 
 try:
     import japaneseDict
@@ -160,8 +160,8 @@ class WordSuggestor(QtGui.QWidget):
         self.knownKanjis = dict()
         
         if __name__ == '__main__':
-            self.knownKanjis[unicode('馬')] = 0.5
-            self.knownKanjis[unicode('樺')] = 0.5
+            self.knownKanjis[unicode('鬯')] = 0.5
+            self.knownKanjis[unicode('隶')] = 0.5
             
             self.kanjiCardsResultsNumberLabel.setText(str(len(self.knownKanjis)))
             return
@@ -196,9 +196,8 @@ class WordSuggestor(QtGui.QWidget):
         self.knownWords = dict()
         
         if __name__ == '__main__':
-            self.knownWords[unicode('蟷')] = 0.5
-            self.knownWords[unicode('譛')] = 0.5
-            self.knownWords[unicode('逕')] = 0.5
+            self.knownWords[unicode('髯')] = 0.5
+            self.knownWords[unicode('髫')] = 0.5
             
             self.WordCardsResultsNumberLabel.setText(str(len(self.knownKanjis)))
             return
@@ -340,8 +339,12 @@ class WordSuggestor(QtGui.QWidget):
             self.resultsList.takeItem(self.resultsList.currentRow())
             self.ignoredWords[ignoreWord] = True
             #open file and append the word
-            with open(ignorePath, 'a') as ignoreFile:
+            
+            with codecs.open(ignorePath, 'a', 'UTF-8') as ignoreFile:
+                print "ADDING TO IGNORE"
+                print ignoreWord
                 ignoreFile.write(ignoreWord+'\n')
+                
         except AttributeError:
             pass    
         #load word into ignored list
@@ -351,15 +354,13 @@ class WordSuggestor(QtGui.QWidget):
     def loadIgnoredWords(self):
         #open file
         self.ignoredWords = dict()
-        with open(ignorePath) as ignoreFile:
+        with codecs.open(ignorePath, 'r', 'UTF-8') as ignoreFile:
             ignoreFromFile = ignoreFile.read().splitlines()
             
         for w in ignoreFromFile:
             self.ignoredWords[w] = True
             
         print "Ignored Words:"
-        for kk in self.ignoredWords.keys():
-            print '#'+kk+'#'
         
     def load(self):
         try:
@@ -395,14 +396,16 @@ class WordSuggestor(QtGui.QWidget):
         print self.knownWords
         #connect
         
-        self.connection = apsw.Connection(databasePath)
+        self.connection = sqlite3.Connection(databasePath)
         self.cursor = self.connection.cursor()
         
         #these are unicode
         ignoreWords = self.knownWords.keys()
         
         #these are srt so convert them
-        ignoreWords += [entry.decode('UTF-8') for entry in  self.ignoredWords.keys()]
+        #ignoreWords += [entry.decode('UTF-8') for entry in  self.ignoredWords.keys()]
+        c
+        ignoreWords += self.ignoredWords.keys()
         
         ignoreWordsTupled = [(entry,) for entry in  ignoreWords]
         #insert ignore words into an ignore table
@@ -415,7 +418,7 @@ class WordSuggestor(QtGui.QWidget):
         #sql="SELECT * FROM dict WHERE kanji NOT IN ({seq}) LIMIT 20".format(seq=','.join(['?']*len(ignoreWords)))
         
         #results = self.cursor.execute(sql, ignoreWords ).fetchall()
-        results = self.cursor.execute('SELECT * FROM dict WHERE kanji NOT IN ignoreWords LIMIT 20').fetchall()
+        results = self.cursor.execute('SELECT * FROM dict WHERE kanji NOT IN ignoreWords').fetchall()
         
         #search DB for top 20 words that are not in ignore and not in knownwords
         
@@ -432,7 +435,7 @@ class WordSuggestor(QtGui.QWidget):
         
         #placeholder funtion
         
-        self.populateList(results)
+        self.populateList(results[0:20])
         return
     
     def populateList(self, results):
