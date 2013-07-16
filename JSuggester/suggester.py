@@ -16,6 +16,7 @@ import sys
 import apsw
 import sqlite3
 import re
+import pickle
 
 try:
     import japaneseDict
@@ -40,7 +41,6 @@ class WordSuggestor(QtGui.QWidget):
         
         #ignored words
         self.ignoredWords = dict()
-        self.loadIgnoredWords()
         
         #list using kanji as keys
         self.knownKanjis = []
@@ -54,8 +54,8 @@ class WordSuggestor(QtGui.QWidget):
         
         
         #Do initial search
-        self.onSearch()
-        
+        #self.onSearch()
+        #self.load()
         
     def initUI(self):
         
@@ -64,7 +64,7 @@ class WordSuggestor(QtGui.QWidget):
         self.optionsLabel.setAlignment(Qt.AlignCenter)
         
         self.kanjiCardsLabel = QtGui.QLabel('Kanji Cards Search:')
-        self.kanjiCardsSearch = QtGui.QLineEdit('Deck:KanjiDeck')
+        self.kanjiCardsSearch = QtGui.QLineEdit('Note:"Japanese (Kanji)"')
         self.kanjiCardsLabel.setAlignment(Qt.AlignCenter)
         
         self.kanjiCardsFieldLabel = QtGui.QLabel('Select Field: ')
@@ -78,7 +78,7 @@ class WordSuggestor(QtGui.QWidget):
         
         self.WordCardsLabel = QtGui.QLabel('Word Cards Search:')
         self.WordCardsLabel.setAlignment(Qt.AlignCenter)
-        self.WordCardsSearch = QtGui.QLineEdit('Deck:VocabDeck')
+        self.WordCardsSearch = QtGui.QLineEdit('Note:"Japanese (Vocab)" OR mid:1372805886784')
         
         #self.WordCardsResultsLabel = QtGui.QLabel('Found: ')
         self.WordCardsButton = QtGui.QPushButton('Get cards!')
@@ -160,11 +160,8 @@ class WordSuggestor(QtGui.QWidget):
         self.knownKanjis = dict()
         
         if __name__ == '__main__':
-            self.knownKanjis['�ｽ�ｽ'] = 0.5
-            self.knownKanjis['�ｽL'] = 0.5
-            self.knownKanjis['�ｽ�ｽ'] = 0.5
-            self.knownKanjis['�ｽ�ｽ'] = 0.5
-            self.knownKanjis['�ｽ�ｽ'] = 0.5
+            self.knownKanjis[unicode('馬')] = 0.5
+            self.knownKanjis[unicode('樺')] = 0.5
             
             self.kanjiCardsResultsNumberLabel.setText(str(len(self.knownKanjis)))
             return
@@ -199,29 +196,29 @@ class WordSuggestor(QtGui.QWidget):
         self.knownWords = dict()
         
         if __name__ == '__main__':
-            self.knownWords['迪ｫ'] = 0.5
-            self.knownWords['縺秘｣ｯ'] = 0.5
-            self.knownWords['繝舌ぜ'] = 0.5
+            self.knownWords[unicode('蟷')] = 0.5
+            self.knownWords[unicode('譛')] = 0.5
+            self.knownWords[unicode('逕')] = 0.5
             
             self.WordCardsResultsNumberLabel.setText(str(len(self.knownKanjis)))
             return
         #########
         
         #goto anki etc
-        ids = mw.col.findCards(self.WordCardsSearch.text())
+        #ids = mw.col.findCards(self.WordCardsSearch.text())
         #get cards from anki
         WordField = self.WordCardsFieldSelector.currentText()
         
         
-        for cardid in ids:
+        for cardid in self.knownWordCardIDs:
             try:
                 card = mw.col.getCard(cardid)
                 note = card.note()
-                #get first kanji in that field
+
                 
-                
+                #get bit before the reading, if there is any. Else get the whole field                
                 word = re.findall(ur'(.*)\[.*', unicode(note[WordField]))
-                if not word:
+                if word:
                     continue
                 else:
                     word = unicode(note[WordField])
@@ -252,6 +249,8 @@ class WordSuggestor(QtGui.QWidget):
         if __name__ == '__main__':
             self.kanjiCardsFieldSelector.clear()
             self.kanjiCardsFieldSelector.addItems(['1',' 2', '3', '4'])
+            #update number of results
+            self.kanjiCardsResultsNumberLabel.setText('4')
             return
         
         
@@ -293,6 +292,8 @@ class WordSuggestor(QtGui.QWidget):
         if __name__ == '__main__':
             self.WordCardsFieldSelector.clear()
             self.WordCardsFieldSelector.addItems(['a',' b', 'c', 'd'])
+            #update number of results
+            self.WordCardsResultsNumberLabel.setText('4')
             return
         
         #get anki cards
@@ -333,14 +334,16 @@ class WordSuggestor(QtGui.QWidget):
         return
     
     def onIgnore(self):
-        #set ignore flag
-        self.resultsList.takeItem(self.resultsList.currentRow())
-        ignoreWord = self.resultsList.currentItem().word
-        self.ignoredWords[ignoreWord] = True
-        #open file and append the word
-        with open(ignorePath, 'a') as ignoreFile:
-            ignoreFile.write(ignoreWord+'\n')
-            
+        try:
+            #set ignore flag
+            ignoreWord = self.resultsList.currentItem().word
+            self.resultsList.takeItem(self.resultsList.currentRow())
+            self.ignoredWords[ignoreWord] = True
+            #open file and append the word
+            with open(ignorePath, 'a') as ignoreFile:
+                ignoreFile.write(ignoreWord+'\n')
+        except AttributeError:
+            pass    
         #load word into ignored list
         #refresh the search/remove from list
         return
@@ -358,11 +361,35 @@ class WordSuggestor(QtGui.QWidget):
         for kk in self.ignoredWords.keys():
             print '#'+kk+'#'
         
+    def load(self):
+        try:
+            self.WordCardsFieldSelector = pickle.load( open( "save.p", "rb" ) )
+        except IOError:
+            pass
+#         self.kanjiCardsFieldSelector = loadObject.kanjiCombobox 
+#         self.WordCardsFieldSelector = loadObject.wordCombobox 
+#         self.kanjiCardsSearch = loadObject.kanjiSearchText 
+#         self.WordCardsSearch = loadObject.wordSearchText 
+        
+        
+        
+    def save(self):
+#         saveObject = QObject()
+#         saveObject.kanjiCombobox = self.kanjiCardsFieldSelector.sav
+#         saveObject.wordCombobox = self.WordCardsFieldSelector
+#         saveObject.kanjiSearchText = self.kanjiCardsSearch
+#         saveObject.wordSearchText = self.WordCardsSearch
+        
+        pickle.dump( self.WordCardsFieldSelector, open( "save.p", "wb" ) )
+        
+        
     def onSearch(self):
         #search and populate the list
         self.getWordList()
         self.getKanjiList()
-        
+        self.loadIgnoredWords()
+        #self.save()
+        #self.save()
         print self.knownKanjis
         
         print self.knownWords
@@ -371,11 +398,27 @@ class WordSuggestor(QtGui.QWidget):
         self.connection = apsw.Connection(databasePath)
         self.cursor = self.connection.cursor()
         
-        results = self.cursor.execute('SELECT * FROM dict LIMIT 20').fetchall()[0]
+        #these are unicode
+        ignoreWords = self.knownWords.keys()
         
+        #these are srt so convert them
+        ignoreWords += [entry.decode('UTF-8') for entry in  self.ignoredWords.keys()]
+        
+        ignoreWordsTupled = [(entry,) for entry in  ignoreWords]
+        #insert ignore words into an ignore table
+        self.cursor.execute('CREATE TEMP TABLE ignoreWords (word)')
+#         for ent in ignoreWords:
+#             self.cursor.execute('INSERT INTO ignoreWords (word) VALUES (?)', [ent])
+        self.cursor.executemany('INSERT INTO ignoreWords (word) VALUES (?)', ignoreWordsTupled)
+        
+        #some sql string formatting
+        #sql="SELECT * FROM dict WHERE kanji NOT IN ({seq}) LIMIT 20".format(seq=','.join(['?']*len(ignoreWords)))
+        
+        #results = self.cursor.execute(sql, ignoreWords ).fetchall()
+        results = self.cursor.execute('SELECT * FROM dict WHERE kanji NOT IN ignoreWords LIMIT 20').fetchall()
         
         #search DB for top 20 words that are not in ignore and not in knownwords
-        returnedList= self.cursor.execute('SELECT * FROM dict LIMIT 20').fetchall()
+        
         #and have kanji in the knownKanjis list
         #close
         self.cursor.close()
@@ -389,14 +432,14 @@ class WordSuggestor(QtGui.QWidget):
         
         #placeholder funtion
         
-        self.populateList(returnedList)
+        self.populateList(results)
         return
     
     def populateList(self, results):
         
         for i in results:
-            item = QListWidgetItem(i[0] + '[' + i[1] + ']: ' + i[2])
-            item.word = i[0]
+            item = QListWidgetItem(unicode(i[0] + '[' + i[1] + ']: ' + i[2]))
+            item.word = unicode(i[0])
             self.resultsList.addItem(item)
             
         return
