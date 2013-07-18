@@ -17,6 +17,10 @@ import sqlite3
 import re
 import cPickle as pickle
 import codecs
+from collections import defaultdict
+
+
+
 
 try:
     import japaneseDict
@@ -45,13 +49,13 @@ class WordSuggestor(QtGui.QWidget):
         self.ignoredWords = dict()
         
         #list using kanji as keys
-        self.knownKanjis = []
+        self.knownKanjis = dict()
         
         #wordCards
         self.knownWordCardIDs = []
         
         #normal list to use and exclude from database searches (words as keys)
-        self.knownWords = []
+        self.knownWords = dict()
         
         
         
@@ -155,7 +159,6 @@ class WordSuggestor(QtGui.QWidget):
       
     def getKanjiList(self):
         #TEST
-        self.knownKanjis = dict()
         
         if __name__ == '__main__':
             self.knownKanjis[unicode('鬯')] = 0.5
@@ -182,14 +185,20 @@ class WordSuggestor(QtGui.QWidget):
                 else:
                     kanji = kanji[0]
                 #possible problem if kanji is already in this list? what do? for now overwrite
-                self.knownKanjis[kanji] = card.ivl/27
+                self.addKnownKanji(kanji, card.ivl/27)
                 #########################WHAT VALUE
             except KeyError:
                 continue
         
+    def addKnownKanji(self, kanji, value):
+        if kanji in self.knownKanjis:
+            self.knownKanjis[kanji] = max(self.knownKanjis[kanji], value)
+        else:
+            self.knownKanjis[kanji] = float(value)
+        
+        
     def getWordList(self):
         #TEST
-        self.knownWords = dict()
         
         if __name__ == '__main__':
             self.knownWords[unicode('髯')] = 0.5
@@ -222,7 +231,13 @@ class WordSuggestor(QtGui.QWidget):
                     word = stripHTML(word)
                 #just set boolean, we're only checking to see if the word exists
                 self.knownWords[word] = True
-
+                
+                
+                #extract the kanji from word
+                kanjiz = self.getKanji(word)
+                for k in kanjiz:
+                    self.addKnownKanji(k, card.ivl/27)
+                
             except KeyError:
                 continue
         
@@ -340,7 +355,6 @@ class WordSuggestor(QtGui.QWidget):
     
     def loadIgnoredWords(self):
         #open file
-        self.ignoredWords = dict()
         with codecs.open(ignorePath, 'r', 'UTF-8') as ignoreFile:
             ignoreFromFile = ignoreFile.read().splitlines()
             
@@ -352,8 +366,8 @@ class WordSuggestor(QtGui.QWidget):
         
     def onSearch(self):
         #search and populate the list
-        self.getWordList()
         self.getKanjiList()
+        self.getWordList()
         self.loadIgnoredWords()
         #self.save()
         #self.save()
