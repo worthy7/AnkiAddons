@@ -15,7 +15,7 @@ import os
 import sys
 import sqlite3
 import re
-import pickle
+import cPickle as pickle
 import codecs
 
 try:
@@ -27,6 +27,7 @@ except:
 
 this_dir, this_filename = os.path.split(__file__)
 databasePath = os.path.join(this_dir, "edict.db") 
+edictPicklePath = os.path.join(this_dir, "edict.pickle")
 edictPath = os.path.join(this_dir, "edict_freq.txt") 
 ignorePath = os.path.join(this_dir, "ignoredList.txt")
 
@@ -36,6 +37,7 @@ class WordSuggestor(QtGui.QWidget):
         super(WordSuggestor, self).__init__()
         self.initUI()
         
+        self.edict = dict()
         #kanjiCards
         self.knownKanjiCardIDs = []
         
@@ -138,8 +140,6 @@ class WordSuggestor(QtGui.QWidget):
         #self.kanjiCardsSearch.editingFinished.connect(self.onKanjiFieldChange)
         #self.WordCardsSearch.editingFinished.connect(self.onVocabFieldChange)
         
-        self.kanjiCardsFieldSelector.currentIndexChanged.connect(self.onKanjiComboBox)
-        self.WordCardsFieldSelector.currentIndexChanged.connect(self.onWordComboBox)
         
         self.kanjiCardsButton.clicked.connect(self.onKanjiFieldChange)
         self.WordCardsButton.clicked.connect(self.onVocabFieldChange)
@@ -152,9 +152,7 @@ class WordSuggestor(QtGui.QWidget):
         #set title, and show
         self.setWindowTitle( 'Simple Japanese Word Suggester' )
         self.show()
-        
-    
-
+      
     def getKanjiList(self):
         #TEST
         self.knownKanjis = dict()
@@ -184,12 +182,10 @@ class WordSuggestor(QtGui.QWidget):
                 else:
                     kanji = kanji[0]
                 #possible problem if kanji is already in this list? what do? for now overwrite
-                self.knownKanjis[kanji] = 0.5
+                self.knownKanjis[kanji] = card.ivl/27
                 #########################WHAT VALUE
             except KeyError:
                 continue
-        
-        
         
     def getWordList(self):
         #TEST
@@ -233,14 +229,6 @@ class WordSuggestor(QtGui.QWidget):
         
         return
         
-    def onKanjiComboBox(self):
-        
-        return
-    
-    def onWordComboBox(self):
-        
-        return
-    
     def getKanjiCardFields(self):
         #populate combo box with fields available
         
@@ -297,7 +285,6 @@ class WordSuggestor(QtGui.QWidget):
         
         #get anki cards
         ids = mw.col.findCards(self.WordCardsSearch.text())
-        
         
         
         #update number of results
@@ -362,29 +349,96 @@ class WordSuggestor(QtGui.QWidget):
             
         print "Ignored Words:"
         
-    def load(self):
-        try:
-            self.WordCardsFieldSelector = pickle.load( open( "save.p", "rb" ) )
-        except IOError:
-            pass
-#         self.kanjiCardsFieldSelector = loadObject.kanjiCombobox 
-#         self.WordCardsFieldSelector = loadObject.wordCombobox 
-#         self.kanjiCardsSearch = loadObject.kanjiSearchText 
-#         self.WordCardsSearch = loadObject.wordSearchText 
-        
-        
-        
-    def save(self):
-#         saveObject = QObject()
-#         saveObject.kanjiCombobox = self.kanjiCardsFieldSelector.sav
-#         saveObject.wordCombobox = self.WordCardsFieldSelector
-#         saveObject.kanjiSearchText = self.kanjiCardsSearch
-#         saveObject.wordSearchText = self.WordCardsSearch
-        
-        pickle.dump( self.WordCardsFieldSelector, open( "save.p", "wb" ) )
-        
         
     def onSearch(self):
+        #search and populate the list
+        self.getWordList()
+        self.getKanjiList()
+        self.loadIgnoredWords()
+        #self.save()
+        #self.save()
+        print self.knownKanjis
+        
+        print self.knownWords
+        
+        
+        #load dict
+        self.loadPickleDictionary()
+        
+        
+        #these are unicode
+        dontShowWords = self.knownWords.keys()
+        
+        dontShowWords += self.ignoredWords.keys()
+        
+        #merge ignored words and known word dicts
+        
+        
+        #dontShowWords 
+        
+        #results = self.cursor.execute('SELECT * FROM dict WHERE kanji NOT IN ignoreWords').fetchall()
+        
+        
+        
+        #get dict and update values, then sort and return results
+        
+        #get initial results excluding known words and ignore words 
+        results = []
+        resultKeys = self.edict.viewkeys() - (self.knownWords.viewkeys() | self.ignoredWords.viewkeys())
+        
+        
+        #and have kanji in the knownKanjis list
+        
+        count = 0
+        l = len(resultKeys)
+        for r in resultKeys:
+#         entry = {'reading':reading, 
+#         'meaning':meaning, 
+#         'pFlag':popular, 
+#         'kanjis':kanjis, 
+#         'percentOfTotal':percentOfTotal} 
+#             print str(count) + '/' + str(l) 
+#             count += 1
+
+            try:
+                kanjiMod = self.knownKanjis[self.edict[r]['kanjis'][0]]
+            except KeyError:
+                kanjiMod = 0.5
+            self.edict[r]['sortValue'] =self.edict[r]['percentOfTotal']*kanjiMod
+         
+        #sort dict again
+        ##slow implementation apparently?
+        #sorted(results, key=results.get)
+        ##faster more confusing implementation?
+        from operator import itemgetter
+        sorted_results = sorted(resultKeys, key=lambda k: self.edict[k]['sortValue'], reverse=True)
+        
+        
+        #clear list
+        self.resultsList.clear()
+        
+        #display results
+        
+        #placeholder funtion
+        
+        self.populateListFromPickle(sorted_results[0:100])
+        return
+        
+        
+    def populateListFromPickle(self, results):
+        
+        
+        #entry = {'reading':reading, 'meaning':meaning, 'pFlag':popular, 'kanjis':kanjis, 'percentOfTotal':percentOfTotal}
+                
+        for i in results:
+            item = QListWidgetItem(unicode(str(self.edict[i]['sortValue']) + '::' + i + '[' + self.edict[i]['reading'] + ']: ' + self.edict[i]['meaning']))
+            item.word = unicode(i)
+            self.resultsList.addItem(item)
+            
+        return
+    
+        
+    def onSearchDB(self):
         #search and populate the list
         self.getWordList()
         self.getKanjiList()
@@ -404,7 +458,7 @@ class WordSuggestor(QtGui.QWidget):
         
         #these are srt so convert them
         #ignoreWords += [entry.decode('UTF-8') for entry in  self.ignoredWords.keys()]
-        c
+        
         ignoreWords += self.ignoredWords.keys()
         
         ignoreWordsTupled = [(entry,) for entry in  ignoreWords]
@@ -435,10 +489,10 @@ class WordSuggestor(QtGui.QWidget):
         
         #placeholder funtion
         
-        self.populateList(results[0:20])
+        self.populateListFromDb(results[0:20])
         return
     
-    def populateList(self, results):
+    def populateListFromDb(self, results):
         
         for i in results:
             item = QListWidgetItem(unicode(i[0] + '[' + i[1] + ']: ' + i[2]))
@@ -518,6 +572,75 @@ class WordSuggestor(QtGui.QWidget):
             self.connection.close()
             #db_input.append((unicode(i[0]), ))    
     
+    def getKanji(self, inputString):
+        return re.findall(ur'[\u4e00-\u9fbf]', unicode(inputString))
+    
+    
+    def createDictionaryPickle(self):
+        def file_len(fname):
+            with open(fname) as f:
+                for i, l in enumerate(f):
+                    pass
+            return i + 1
+        
+        filelength = str( file_len(edictPath))
+        
+        edictDict = dict()
+        with open(edictPath, 'rb') as input_file:
+            reader = csv.reader(input_file, delimiter="\t")
+#             0[cumulative occurrences]
+#             1\t[instance occurrences]
+#             2\t[instance percentage of total]
+#             3\t[cumulative percentage of total]
+#             4\t[terms and definitions delimited by pipes]
+            count = 0
+            
+            for i in reader:
+                
+                
+                percentOfTotal = i[2]
+                print str(count) + ' / ' + filelength
+                count = count + 1
+                #detect if kanji and save them
+                firstfield = i[4].split('|')[0]
+                kanjis = []
+                kanjis = re.findall(ur'[\u4e00-\u9fbf]', unicode(firstfield))
+                if len(kanjis) == 0:
+                    continue
+                
+                #count number of meanings, if more than 2 get from external
+                meaningsCount = re.findall(firstfield, i[4])
+                if len(meaningsCount) > 1:
+                    #get best meaning
+                    bestResult = self.getBestMeaning(unicode(firstfield))
+                    #(expression, unicode(), glossary, conjugations, source, count)
+                    if not bestResult:
+                        print 'Couldnt match ' + firstfield
+                        continue
+                    
+                    expression = unicode(bestResult[0])
+                    reading = unicode(bestResult[1])
+                    meaning = unicode(bestResult[2])
+                else:
+                    expression = unicode(firstfield)
+                    reading = unicode(i[4].split('|')[1])
+                    meaning = unicode(','.join(i[4].split('|')[2::]))
+                    
+                    
+                popular = re.findall(ur'\(P\)', i[4])
+                if popular:
+                    popular = 1
+                else:
+                    popular = 0
+                    
+                    #{'one': 1, 'two': 2, 'three': 3}
+                #percentOfTotal, expression, reading , meaning, popular, kanjis[])
+                entry = {'reading':reading, 'meaning':meaning, 'pFlag':popular, 'kanjis':kanjis, 'percentOfTotal':float(percentOfTotal)}
+                edictDict[expression] = entry
+            pickle.dump(edictDict, open( edictPicklePath, "wb" ), -1)
+        
+        
+    
     def getBestMeaning(self, word):
         language = japaneseDict.initLanguage()
         
@@ -539,18 +662,20 @@ class WordSuggestor(QtGui.QWidget):
             return results[0]
     
     
-    def connect2edict(self):
+    def loadPickleDictionary(self):
         
         #########
 #         os.remove(databasePath)
 #         self.createDictionaryDatabase()
         #########
-        if not os.path.exists(databasePath) and os.path.exists(edictPath):
-            #if no database, but there is an edict file, read from EDICT, and create the database
-            self.createDictionaryDatabase()
-        
-        print results
-        
+        if not os.path.exists(edictPicklePath) and os.path.exists(edictPath):
+            #if no pickle, but there is an edict file, read from EDICT, and create the database
+            print 'Making dictionary...'
+            self.createDictionaryPickle()
+            print 'Dictionary = Finished!'
+        print 'Loading dict'
+        self.edict = pickle.load(open( edictPicklePath, "rb" ))
+        print 'Done!'
         
 def main():
     
