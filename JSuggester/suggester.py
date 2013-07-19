@@ -34,6 +34,8 @@ databasePath = os.path.join(this_dir, "edict.db")
 edictPicklePath = os.path.join(this_dir, "edict.pickle")
 edictPath = os.path.join(this_dir, "edict_freq.txt") 
 ignorePath = os.path.join(this_dir, "ignoredList.txt")
+elementsPicklePath = os.path.join(this_dir, "elements.pickle")
+
 
 class WordSuggestor(QtGui.QWidget):
     
@@ -153,9 +155,58 @@ class WordSuggestor(QtGui.QWidget):
         self.ignoreButton.clicked.connect(self.onIgnore)
         
         
+        #load pickle for some elements
+        self.loadElementsPickle()
+        
+        
         #set title, and show
         self.setWindowTitle( 'Simple Japanese Word Suggester' )
         self.show()
+    
+    
+    def loadElementsPickle(self):
+        #if pickle exists
+         if os.path.exists(elementsPicklePath):
+            loadedPickle = pickle.load(open( elementsPicklePath, "rb" ))
+            
+            self.kanjiCardsSearch.setText(loadedPickle["kanjiSearchText"])
+            self.WordCardsSearch.setText(loadedPickle["wordSearchText"])
+            
+            #then do a search
+            self.getKanjiCardFields()
+            self.getWordCardFields()
+            
+            #search comboboxes for index
+            kanjiFIndex = self.kanjiCardsFieldSelector.findText(loadedPickle["kanjiSelectedFieldText"])
+            wordFIndex = self.WordCardsFieldSelector.findText(loadedPickle["kanjiSelectedFieldText"])
+            
+            if kanjiFIndex < 0:
+                kanjiFIndex = 0
+            if wordFIndex < 0:
+                wordFIndex = 0
+                
+            #might cause an error if field doesnt exist anymore (get index return 0?)
+            self.kanjiCardsFieldSelector.setCurrentIndex(kanjiFIndex)
+            
+            self.WordCardsFieldSelector.setCurrentIndex(wordFIndex)
+        
+        
+        
+            
+            
+            
+    def saveElementsPickle(self):
+        
+            
+        savePickle = dict()
+        savePickle = {
+            "kanjiSearchText": self.kanjiCardsSearch.text(),
+            "kanjiSelectedFieldText": self.kanjiCardsFieldSelector.currentText(),
+            "wordSearchText": self.WordCardsSearch.text(),
+            "wordSelectedFieldIndex": self.WordCardsFieldSelector.currentText()
+                    }
+        pickle.dump(savePickle, open(elementsPicklePath, 'wb'))
+            
       
     def getKanjiList(self):
         #TEST
@@ -436,6 +487,10 @@ class WordSuggestor(QtGui.QWidget):
         #placeholder funtion
         
         self.populateListFromPickle(sorted_results[0:100])
+        
+        #save the search elements
+        self.saveElementsPickle()
+        
         return
         
         
@@ -445,7 +500,8 @@ class WordSuggestor(QtGui.QWidget):
         #entry = {'reading':reading, 'meaning':meaning, 'pFlag':popular, 'kanjis':kanjis, 'percentOfTotal':percentOfTotal}
                 
         for i in results:
-            item = QListWidgetItem(unicode(str(self.edict[i]['sortValue']) + '::' + i + '[' + self.edict[i]['reading'] + ']: ' + self.edict[i]['meaning']))
+            #item = QListWidgetItem(unicode(str(self.edict[i]['sortValue']) + '::' + i + '[' + self.edict[i]['reading'] + ']: ' + self.edict[i]['meaning']))
+            item = QListWidgetItem(unicode(i + '[' + self.edict[i]['reading'] + ']: ' + self.edict[i]['meaning']))
             item.word = unicode(i)
             self.resultsList.addItem(item)
             
