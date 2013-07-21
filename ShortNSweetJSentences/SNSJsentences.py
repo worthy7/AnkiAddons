@@ -12,20 +12,16 @@
 
 from aqt import mw
 import os
-import codecs
-import cPickle
-import random
 import re
 from japanese.reading import mecab
-import sys
-import gc
 import csv
-from anki.utils import stripHTML, isWin, isMac
+from anki.utils import stripHTML
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import collections
 import sqlite3
 from anki.hooks import addHook
+import time
 
 
 EList = collections.namedtuple('exampleList',['qjap', 'ejap', 'eng'])
@@ -33,9 +29,9 @@ EList = collections.namedtuple('exampleList',['qjap', 'ejap', 'eng'])
 # file containing the Tatoeba corpus sentences
 
 #cursor for database stuff
-cursor = None
+#cursor = None
 
-expField  = "Expression"
+expField  = "Dictionary Form"
 dstField = "Tatoeba Examples"
 
 MAX = 3
@@ -58,24 +54,24 @@ def createExamplesDatabase():
     
     
     #english examples go here
-    cursor.execute("""CREATE TABLE EngExamples (ID INT, sentence ntext)
-               """)
+#     cursor.execute("""CREATE TABLE EngExamples (ID INT, sentence ntext)
+#                """)
     
     #japanese examples go here, using Mecab as a tokenizer
-    cursor.execute("CREATE TABLE JapExamples (ID INT,  sentence ntext)")
+#     cursor.execute("CREATE TABLE JapExamples (ID INT,  sentence ntext)")
     
     #both examples in this table
-    cursor.execute("""CREATE TABLE examples (JID INT, jSentence ntext, eSentence ntext)
+    cursor.execute("""CREATE TABLE examples (JID INT PRIMARY KEY, jSentence ntext, eSentence ntext)
            """)
         
     #links table
-    cursor.execute("""CREATE TABLE links
-              (index1 INT  SECONDARY KEY , index2  INT  SECONDARY KEY) 
-           """)
+#     cursor.execute("""CREATE TABLE links
+#               (index1 INT  SECONDARY KEY , index2  INT  SECONDARY KEY) 
+#            """)
     
     #create word table
     cursor.execute("""CREATE TABLE wordLinks
-          (jap_Sentence_ID INT SECONDARY KEY , 
+          (jap_Sentence_ID INT , 
            keyword_offset INT, 
            keyword_length INT, 
            keyword TEXT, 
@@ -85,10 +81,10 @@ def createExamplesDatabase():
     
 
     #ENG - JAP LINKS
-    with open('links_jpneng.csv', 'rb') as input_file:
-        reader = csv.reader(input_file, delimiter="\t")
-        engJap2db = [(i[0], i[1]) for i in reader]
-    cursor.executemany("INSERT INTO links (index1, index2) VALUES (?, ?);", engJap2db)
+#     with open('links_jpneng.csv', 'rb') as input_file:
+#         reader = csv.reader(input_file, delimiter="\t")
+#         engJap2db = [(i[0], i[1]) for i in reader]
+#     cursor.executemany("INSERT INTO links (index1, index2) VALUES (?, ?);", engJap2db)
     
     #BOTH SENTENCES
     #japSentence, engSentence, JapID, engID
@@ -99,25 +95,31 @@ def createExamplesDatabase():
     for i in content[0:len(content):2]:
         fields  = reg.match(unicode(i))
         addIn = fields.group(1, 2, 3)
-        inarray.append((addIn))
-
-    cursor.executemany("INSERT INTO examples (jSentence, eSentence, JID) VALUES (?, ?, ?);", inarray)
+#         if addIn[2] in inarray and addIn[0] != inarray[addIn[2]][0]:
+#             print addIn[0]
+#             print addIn[1]
+#             print inarray[addIn[2]][0]
+#             print inarray[addIn[2]][1]
+        inarray.append(addIn)
+        #inarray.append((addIn))
+        
+        
+    cursor.executemany("INSERT OR IGNORE INTO examples (jSentence, eSentence, JID) VALUES (?, ?, ?);", inarray)
     
     
     #SENTENCES
-    with open('sentences_jpeng_sorted.csv', 'rb') as input_file:
-        reader = csv.reader(input_file, delimiter="\t")
-        eng_db = []
-        jap_db = []
-        for i in reader:
-            if i[1] == 'eng':
-                eng_db.append((i[0], unicode(i[2])))
-            elif i[1] == 'jpn':
-                jap_db.append((i[0], unicode(i[2])))
-        #to_db = [(i[0], i[1], unicode(i[2])) for i in reader]
+#     with open('sentences_jpeng_sorted.csv', 'rb') as input_file:
+#         reader = csv.reader(input_file, delimiter="\t")
+#         eng_db = []
+#         jap_db = []
+#         for i in reader:
+#             if i[1] == 'eng':
+#                 eng_db.append((i[0], unicode(i[2])))
+#             elif i[1] == 'jpn':
+#                 jap_db.append((i[0], unicode(i[2])))
 
-    cursor.executemany("INSERT INTO EngExamples (ID, sentence) VALUES (?, ?);", eng_db)
-    cursor.executemany("INSERT INTO JapExamples (ID, sentence) VALUES (?, ?);", jap_db)
+#     cursor.executemany("INSERT INTO EngExamples (ID, sentence) VALUES (?, ?);", eng_db)
+#     cursor.executemany("INSERT INTO JapExamples (ID, sentence) VALUES (?, ?);", jap_db)
     
     
     
@@ -133,19 +135,12 @@ def createExamplesDatabase():
     
     conn.commit()
     print 'Made DB'
-    print [x for x in cursor.execute('select * from EngExamples LIMIT 5')]
-    print [x for x in cursor.execute('select * from JapExamples LIMIT 5')]
-    print [x for x in cursor.execute('select * from links LIMIT 5')]
+#     print [x for x in cursor.execute('select * from EngExamples LIMIT 5')]
+#     print [x for x in cursor.execute('select * from JapExamples LIMIT 5')]
+#     print [x for x in cursor.execute('select * from links LIMIT 5')]
     print [x for x in cursor.execute('select * from wordLinks LIMIT 5')]
     print [x for x in cursor.execute('select * from examples LIMIT 5')]
-    conn.close()
-        
-def makeExamples(self, term, sentence):
-    return sentence
-
-
-def makeQuestions(term, sentence):
-    return sentence
+    conn.close
     
 
 def howManyExamples(expression):
@@ -159,19 +154,10 @@ def howManyExamples(expression):
     
     print number
     return number
-        
-def find_examples(expression):
-    info_question = ""
-    info_answer = ""
-    maxitems = MAX
-    examples_question = []
-    examples_eng = []        
-    examples_jap = []
-    examples = []
-        
-    global cursor
-    
-    results = cursor.execute('''Select * from (SELECT E.jSentence,
+
+
+def getResults(expression):
+        results = cursor.execute('''Select * from (SELECT E.jSentence,
                             E.eSentence,
                             WL.keyword_offset, 
                             WL.keyword_length,
@@ -182,54 +168,56 @@ def find_examples(expression):
                             WHERE WL.keyword=(?)
                             ORDER BY LENGTH(E.jSentence) DESC) 
                             GROUP by sense
-                            ''', expression)
+                            ''', [expression])
+        return results
+    
+def find_examples(expression):
+    examples_question = []
+    examples_eng = []        
+    examples_jap = []
+        
+    global cursor
+    
+    results = getResults(expression)
     
     resultsList = results.fetchall()
     for i in resultsList:
         print '--------'
-        print 'jsen:' + str(i[0])
-        print 'esen:' + str(i[1])
-        print 'offset:' + str(i[2])
-        print 'len:' + str(i[3])
-        print 'sense:' + str(i[4])
-        print 'senLen:' + str(i[5])
-    #get lengths of all sentences into a tuple list
-    exampleLengthsDuple =[(e[0], e[1], len(e[1].split('\t')[0])) for e in examples]
-    #sort get top MAX shortest items
-    exampleLengthsDuple.sort(key=lambda tup: tup[2])
-    #return the top MAX expressions and examples
-    shortestExamples = [(x[0], x[1]) for x in exampleLengthsDuple[0:maxitems]]
-    
-    for exampleDuple in shortestExamples:
-        example= exampleDuple[1]
-        expression = exampleDuple[0]
-        #add original example to jap array
-        japA = "%s" % example.split('\t')[0]
-        engA = "%s" % example.split('\t')[1]
-        
+        print 'jsen:' + unicode(i[0])
+        print 'esen:' + unicode(i[1])
+        print 'offset:' + unicode(i[2])
+        print 'len:' + unicode(i[3])
+        print 'sense:' + unicode(i[4])
+        print 'senLen:' + unicode(i[5])
         
         #English can be added
-        examples_eng.append(engA)
-        
+        examples_eng.append(i[1])
         
         #get a reading version of jap sentence for answer
-        japAnswer = mecab.reading(japA)
-
-        exampleQ = japA.replace(expression,'<span class=focusword>_____</span>')
+        japAnswer = mecab.reading(i[0])
+        
+        expressionForm = i[0][(i[2]+1):(i[2]+i[3]+1)]
+        #this replaces the word we want with the underline
+        exampleQ = i[0].replace(expressionForm ,'<span class=focusword>_____</span>')
         
         
         #for original sentence make sure to search the reading version of the term
-        expression_reading = mecab.reading(expression)
-        exampleJ = japAnswer.replace(expression_reading ,'<span class=focusword>'+expression_reading +'</span>')
-                
+        expression_reading = mecab.reading(expressionForm)
+        #first try to replace using the reading version
+        replacedJapAnswer = japAnswer.replace(expression_reading ,'<span class=focusword>'+expression_reading +'</span>')
+        
+        #if it failed to replace using reading version then just replace the normal
+        if replacedJapAnswer == japAnswer:
+            replacedJapAnswer = japAnswer.replace(expressionForm ,'<span class=focusword>'+expressionForm +'</span>')
+        exampleJ = replacedJapAnswer        
                 
         #add jap and question
         examples_question.append(exampleQ)
         examples_jap.append(exampleJ)
         
-        
-
-
+        print unicode(examples_question)
+        print unicode(examples_jap)
+        print unicode(examples_eng)
 
     return EList(examples_question,examples_jap,examples_eng)
     
@@ -239,6 +227,9 @@ def doNote(note):
             
             #This should be the dictionary form of the word
             srcTxt = stripHTML(note[expField])
+            #strip any readings
+            srcTxt = re.sub('(\[.*\])', '', srcTxt)
+            
             
             #wtfdowedo
             qjapR, ajapR, engR = find_examples(srcTxt)
@@ -248,20 +239,14 @@ def doNote(note):
             Examples = '<br>'.join(ajapR)
             Questions = '<br>'.join(qjapR)
             English = '<br>'.join(engR)
-            shortestJapanese = ajapR[0]
-            #format shortestJapanese
-            shortestJapanese = stripHTML(shortestJapanese)
-            shortestJapanese = re.sub('(\[.*?\])', '', shortestJapanese)
             
             
             if(note['Tatoeba Examples'] != Examples or
             note['Tatoeba English'] != English or
-            note['Tatoeba Questions'] != Questions or 
-            note['Tatoeba Shortest'] != shortestJapanese):
+            note['Tatoeba Questions'] != Questions):
                 note['Tatoeba Examples'] = Examples
                 note['Tatoeba English'] = English
                 note['Tatoeba Questions'] = Questions
-                note['Tatoeba Shortest'] = shortestJapanese
                 return True
             return False
         except KeyError:
@@ -309,7 +294,7 @@ def bulkAdd(browser):
         ##skip, deal with it in doNote
         
         #do the note
-        if True == doNote(note, 1):
+        if True == doNote(note):
             note.flush()
             
     #save
@@ -327,6 +312,7 @@ def setupMenu(browser):
 
 if __name__ == '__main__':
     
+    #os.remove(databasePath)
     createExamplesDatabase()
     #do tests
     
@@ -338,12 +324,14 @@ if __name__ == '__main__':
     ##How many
     howManyExamples(unicode('日'))
     ##
-    find_examples(unicode('日'))
+    start_time = time.time()
+    getResults(unicode('冷凍庫'))
+    print time.time() - start_time, "seconds"
     
     cursor.close()
 else:
     print None
     
-    #addHook('editFocusLost', add_examples_focusLost)
+    addHook('editFocusLost', add_examples_focusLost)
     #make menu item
-    #addHook("browser.setupMenus", setupMenu)
+    addHook("browser.setupMenus", setupMenu)
