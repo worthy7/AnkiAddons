@@ -86,7 +86,7 @@ class WordSuggestor(QtGui.QWidget):
         
         self.WordCardsLabel = QtGui.QLabel('Word Cards Search:')
         self.WordCardsLabel.setAlignment(Qt.AlignCenter)
-        self.WordCardsSearch = QtGui.QLineEdit('Note:"Japanese (Vocab)" OR mid:1372805886784')
+        self.WordCardsSearch = QtGui.QLineEdit('Note:"Japanese (Vocab)"')
         
         #self.WordCardsResultsLabel = QtGui.QLabel('Found: ')
         self.WordCardsButton = QtGui.QPushButton('Get cards!')
@@ -406,13 +406,14 @@ class WordSuggestor(QtGui.QWidget):
     
     def loadIgnoredWords(self):
         #open file
-        with codecs.open(ignorePath, 'r', 'UTF-8') as ignoreFile:
-            ignoreFromFile = ignoreFile.read().splitlines()
-            
-        for w in ignoreFromFile:
-            self.ignoredWords[w] = True
-            
-        print "Ignored Words:"
+        if os.path.exists(ignorePath):
+            with codecs.open(ignorePath, 'r', 'UTF-8') as ignoreFile:
+                ignoreFromFile = ignoreFile.read().splitlines()
+                
+            for w in ignoreFromFile:
+                self.ignoredWords[w] = True
+                
+            print "Ignored Words:"
         
         
     def onSearch(self):

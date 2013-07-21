@@ -41,7 +41,7 @@ def addKanjiSplits_bulk(nids):
             
             #do the note and handle the results
             if False == doNote(note):
-                return flag
+                continue
            
                         
             

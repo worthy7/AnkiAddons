@@ -1,7 +1,7 @@
 #!/usr/bin/python
 #-*- coding: utf-8 -*-
 # File: japanese_examples.py
-# Description: Looks for example sentences in the Tanaka Corpus for the current card's expression.
+# Description: Looks for example sentences in the Tatoeba Corpus for the current card's expression.
 # This addon was first based on Andreas Klauer's "kanji_info" plugin, and is a modified version
 # of Guillaume VIRY's example sentences plugin for Anki 1.
 #
@@ -19,138 +19,180 @@ import re
 from japanese.reading import mecab
 import sys
 import gc
+import csv
 from anki.utils import stripHTML, isWin, isMac
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import collections
+import sqlite3
+from anki.hooks import addHook
+
+
 EList = collections.namedtuple('exampleList',['qjap', 'ejap', 'eng'])
 
-# file containing the Tanaka corpus sentences
+# file containing the Tatoeba corpus sentences
 
-this_dir, this_filename = os.path.split(__file__)
-
-file = os.path.join(this_dir, "japanese_examples.utf")
-file_pickle = os.path.join(this_dir, "japanese_examples.pickle")
-f = codecs.open(file, 'r', 'utf8')
-content = f.readlines()
-f.close()
+#cursor for database stuff
+cursor = None
 
 expField  = "Expression"
-dstField = "Tanaka Examples"
+dstField = "Tatoeba Examples"
 
-dictionaries = ({},{})
 MAX = 3
 
-def build_dico():
-    def splitter(txt):
-        txt = re.compile('\s|\[|\]|\(|\{|\)|\}').split(txt)
-        for i in range(0,len(txt)):
-            if txt[i] == "~":
-                txt[i-2] = txt[i-2] + "~"
-                txt[i-1] = txt[i-1] + "~"
-                txt[i] = ""
-        return [x for x in txt if x]
 
-    for i, line in enumerate(content[1::2]):
-        words = set(splitter(line)[1:-1])
-        for word in words:
-            # Choose the appropriate dictionary; priority (0) or normal (1)
-            if word.endswith("~"):
-                dictionary = dictionaries[0]
-                word = word[:-1]
-            else:
-                dictionary = dictionaries[1]
+this_dir, this_filename = os.path.split(__file__)
+databasePath = os.path.join(this_dir, "tatoebaExamples.db")
 
-            if word in dictionary and not word.isdigit():
-                dictionary[word].append(2*i)
-            elif not word.isdigit():
-                dictionary[word]=[]
-                dictionary[word].append(2*i)
 
-if  (os.path.exists(file_pickle) and
-    os.stat(file_pickle).st_mtime > os.stat(file).st_mtime):
-    f = open(file_pickle, 'rb')
-    dictionaries = cPickle.load(f)
-    f.close()
-else:
-    build_dico()
-    f = open(file_pickle, 'wb')
-    cPickle.dump(dictionaries, f, cPickle.HIGHEST_PROTOCOL)
-    f.close()
 
-def makeExamples(term, sentence):
-    #example = example.replace(expression,'<span class=focusword>%s</span>' %expression)
-    #From kims examples
+def createExamplesDatabase():
+    
+    if os.path.exists(databasePath):
+        return
+    #os.remove(databasePath)
+    conn = sqlite3.connect(databasePath)
+    cursor = conn.cursor()
+    
+    cursor.execute('PRAGMA encoding = "UTF-8";')
+    
+    
+    #english examples go here
+    cursor.execute("""CREATE TABLE EngExamples (ID INT, sentence ntext)
+               """)
+    
+    #japanese examples go here, using Mecab as a tokenizer
+    cursor.execute("CREATE TABLE JapExamples (ID INT,  sentence ntext)")
+    
+    #both examples in this table
+    cursor.execute("""CREATE TABLE examples (JID INT, jSentence ntext, eSentence ntext)
+           """)
+        
+    #links table
+    cursor.execute("""CREATE TABLE links
+              (index1 INT  SECONDARY KEY , index2  INT  SECONDARY KEY) 
+           """)
+    
+    #create word table
+    cursor.execute("""CREATE TABLE wordLinks
+          (jap_Sentence_ID INT SECONDARY KEY , 
+           keyword_offset INT, 
+           keyword_length INT, 
+           keyword TEXT, 
+           entry_id INT, 
+           sense INT)""")
+    
+    
+
+    #ENG - JAP LINKS
+    with open('links_jpneng.csv', 'rb') as input_file:
+        reader = csv.reader(input_file, delimiter="\t")
+        engJap2db = [(i[0], i[1]) for i in reader]
+    cursor.executemany("INSERT INTO links (index1, index2) VALUES (?, ?);", engJap2db)
+    
+    #BOTH SENTENCES
+    #japSentence, engSentence, JapID, engID
+    reg = re.compile('A:(.*)\t(.*)#ID=.*_(.*)')
+    inarray = []
+    with open('japanese_examples.utf', 'rb') as input_file:
+        content = input_file.readlines()
+    for i in content[0:len(content):2]:
+        fields  = reg.match(unicode(i))
+        addIn = fields.group(1, 2, 3)
+        inarray.append((addIn))
+
+    cursor.executemany("INSERT INTO examples (jSentence, eSentence, JID) VALUES (?, ?, ?);", inarray)
+    
+    
+    #SENTENCES
+    with open('sentences_jpeng_sorted.csv', 'rb') as input_file:
+        reader = csv.reader(input_file, delimiter="\t")
+        eng_db = []
+        jap_db = []
+        for i in reader:
+            if i[1] == 'eng':
+                eng_db.append((i[0], unicode(i[2])))
+            elif i[1] == 'jpn':
+                jap_db.append((i[0], unicode(i[2])))
+        #to_db = [(i[0], i[1], unicode(i[2])) for i in reader]
+
+    cursor.executemany("INSERT INTO EngExamples (ID, sentence) VALUES (?, ?);", eng_db)
+    cursor.executemany("INSERT INTO JapExamples (ID, sentence) VALUES (?, ?);", jap_db)
+    
+    
+    
+    #WORD - SENTENCE LINKS
+
+    with open('sweet.csv', 'rb') as input_file:
+        reader = csv.reader(input_file, delimiter="\t")
+        wordSenLinks2db = [(unicode(i[0]), unicode(i[1]), unicode(i[2]), unicode(i[3]), unicode(i[4]), unicode(i[5])) for i in reader]
+
+    cursor.executemany("INSERT INTO wordLinks (jap_Sentence_ID, keyword_offset, keyword_length, keyword, entry_id, sense) VALUES (?, ?, ?, ?, ?, ?);", wordSenLinks2db)
+        
+
+    
+    conn.commit()
+    print 'Made DB'
+    print [x for x in cursor.execute('select * from EngExamples LIMIT 5')]
+    print [x for x in cursor.execute('select * from JapExamples LIMIT 5')]
+    print [x for x in cursor.execute('select * from links LIMIT 5')]
+    print [x for x in cursor.execute('select * from wordLinks LIMIT 5')]
+    print [x for x in cursor.execute('select * from examples LIMIT 5')]
+    conn.close()
+        
+def makeExamples(self, term, sentence):
     return sentence
-    #return re.sub(term, "<span class=focusword>"+term+"</span>", sentence)
-    #########
-    #color_example = content[j+1]
-    #regexp = "(?:\(*%s\)*)(?:\([^\s]+?\))*(?:\[\d+\])*\{(.+?)\}" %expression
-    #match = re.compile("%s" %regexp).search(color_example)
-    #if match:
-    #    expression_bis = match.group(1)
-    #    example = example.replace(expression_bis,'<FONT COLOR="#ff0000">%s</FONT>' %expression_bis)
-    #else:
-    #    example = example.replace(expression,'<FONT COLOR="#ff0000">%s</FONT>' %expression)
-    #return example
+
 
 def makeQuestions(term, sentence):
-    #sys.stderr.write("Trying to search on: " +term)
-    #sys.stderr.write("\n" + sentence)
     return sentence
-    #return re.sub(term, "___", sentence)    
     
 
 def howManyExamples(expression):
-    number = 0
-    for dictionary in dictionaries:
-        if expression in dictionary :
-            index = dictionary[expression]
-            number += len(index)
-        else:
-            match = re.search(u"(.*?)[／/]", expression)
-            if match:
-                return howManyExamples(match.group(1))
-        
-            match = re.search(u"(.*?)[(（](.+?)[)）]", expression)
-            if match:
-                if match.group(1).strip():
-                    return howManyExamples("%s%s" % (match.group(1), match.group(2)))    
-    return number
+    connection = sqlite3.Connection(databasePath)
+    cursor = connection.cursor()
     
+    results = cursor.execute('SELECT count(*) FROM wordLinks WHERE keyword = (?)', [expression])
+    
+    number = results.fetchone()[0]
+    connection.close()
+    
+    print number
+    return number
+        
 def find_examples(expression):
     info_question = ""
     info_answer = ""
     maxitems = MAX
     examples_question = []
-    examples_answer = []        
+    examples_eng = []        
     examples_jap = []
     examples = []
-    for dictionary in reversed(dictionaries):
-        if expression in dictionary :
-            index = dictionary[expression]
-            
-            for j in index:
-                example = content[j].split("#ID=")[0][3:]
-                if dictionary == dictionaries[0]:
-                    example = example + " {CHECKED}"
-                examples.append((expression, example))
         
-            #instead of random, select shortest examples
-            #index = random.sample(index, min(len(index),maxitems))
-            #first get size of each sentence, then sort, then select 2 shortest
-        else:
-            match = re.search(u"(.*?)[／/]", expression)
-            if match:
-                return find_examples(match.group(1))
-        
-            match = re.search(u"(.*?)[(（](.+?)[)）]", expression)
-            if match:
-                if match.group(1).strip():
-                    return find_examples("%s%s" % (match.group(1), match.group(2)))
-        
-        
+    global cursor
     
+    results = cursor.execute('''Select * from (SELECT E.jSentence,
+                            E.eSentence,
+                            WL.keyword_offset, 
+                            WL.keyword_length,
+                            WL.sense,
+                            LENGTH(E.jSentence)
+                            FROM examples AS E 
+                            JOIN wordLinks as WL ON E.JID=WL.jap_Sentence_ID  
+                            WHERE WL.keyword=(?)
+                            ORDER BY LENGTH(E.jSentence) DESC) 
+                            GROUP by sense
+                            ''', expression)
+    
+    resultsList = results.fetchall()
+    for i in resultsList:
+        print '--------'
+        print 'jsen:' + str(i[0])
+        print 'esen:' + str(i[1])
+        print 'offset:' + str(i[2])
+        print 'len:' + str(i[3])
+        print 'sense:' + str(i[4])
+        print 'senLen:' + str(i[5])
     #get lengths of all sentences into a tuple list
     exampleLengthsDuple =[(e[0], e[1], len(e[1].split('\t')[0])) for e in examples]
     #sort get top MAX shortest items
@@ -164,37 +206,23 @@ def find_examples(expression):
         #add original example to jap array
         japA = "%s" % example.split('\t')[0]
         engA = "%s" % example.split('\t')[1]
+        
+        
         #English can be added
-        examples_answer.append(engA)
+        examples_eng.append(engA)
         
-        #make a replaced 
-        
-        
-        #color_example = content[j+1]
-        #regexp = "(?:\(*%s\)*)(?:\([^\s]+?\))*(?:\[\d+\])*\{(.+?)\}" %expression
-        #match = re.compile("%s" %regexp).search(color_example)
         
         #get a reading version of jap sentence for answer
         japAnswer = mecab.reading(japA)
-        #if match:
-        #    expression_bis = match.group(1)
-        #    exampleQ = japA.replace(expression_bis,'<span class=focusword>_____</span>')
-        #    #for original sentence make sure to search the reading version of the term
-        #    expression_bis_reading = mecab.reading(expression_bis)
-        #    exampleJ = japAnswer.replace(expression_bis_reading,'<span class=focusword>'+expression_bis_reading+'</span>')
-        #else:
-        #    exampleQ = japA.replace(expression,'<span class=focusword>_____</span>')
-        #    #for original sentence make sure to search the reading version of the term
-        #    expression_reading = mecab.reading(expression)
-        #    exampleJ = japAnswer.replace(expression_reading ,'<span class=focusword>'+expression_reading +'</span>')
-            
+
         exampleQ = japA.replace(expression,'<span class=focusword>_____</span>')
+        
+        
         #for original sentence make sure to search the reading version of the term
         expression_reading = mecab.reading(expression)
         exampleJ = japAnswer.replace(expression_reading ,'<span class=focusword>'+expression_reading +'</span>')
                 
-            
-            
+                
         #add jap and question
         examples_question.append(exampleQ)
         examples_jap.append(exampleJ)
@@ -203,146 +231,119 @@ def find_examples(expression):
 
 
 
-    return EList(examples_question,examples_jap,examples_answer)
-
-    
-    
-    
-
-    
-def rotate_examples():
-    #get id's for all the cards in the default deck or whatever
-    ids = mw.col.findCards("deck:default")
-    
-    #for each one, simple do a get examples on each
-    for id in ids:
-        card = mw.col.getCard(id)
-        note = card.note()
-        return add_examples("doit", note, None)
-    return True
-        
-
-def add_examples_fromyomichan(factId):
-        #sys.stderr.write(int(factId))
-        #card = mw.col.getCard(str(factId))
-        ids = mw.col.findCards('nid:{0}'.format(factId))
-        for id in ids:
-            card = mw.col.getCard(id)
-            note = card.note()
-            add_examples(None, note, None)
-            note["Meaning"] = "Tisdone"
-        note.flush()
-        return True
-        
-    
-    
-def add_examples_focusLost(flag, note, fidx):
-    #check if the fields exist
-    dst = src = None
-    for c, name in enumerate(mw.col.models.fieldNames(note.model())):
-        if name == expField:
-            src = expField
-            srcIdx = c
-        if name == dstField:
-            dst = dstField
-            
-    if not src or not dst:
-        return flag
-    # dst field already filled?
-    #if note[dst]:
-        #return flag
-    # event coming from src field?
-    if fidx != srcIdx:
-        return flag
-        
-    #expression not blank
-    if note[expField] == "":
-        return flag
-    
-    if False == doNote(note):
-        return flag
-    return True
-
-    
-def bulkAdd(browser):
-    nids=browser.selectedNotes()
-
-    mw.checkpoint("Bulk-add Tanaka")
-    mw.progress.start()
-    
-    #check fields
-    note = mw.col.getNote(nids[0])
-    dst = src = None
-    for c, name in enumerate(mw.col.models.fieldNames(note.model())):
-        if name == expField:
-            src = expField
-            srcIdx = c
-        if name == dstField:
-            dst = dstField
-            
-    if not src or not dst:
-        return False
-    
-    for nid in nids:        
-        note = mw.col.getNote(nid)
-        # dst field already filled?
-        #if note[dst]:
-            #continue
-        
-        doNote(note)    
-        note.flush()
-    mw.progress.finish()
-    #gc.collect()
-    mw.reset()
+    return EList(examples_question,examples_jap,examples_eng)
     
 def doNote(note):
-    try:
-        #srcTxt = mw.col.media.strip(note[expField])
-        #if not srcTxt.strip():
-        #    return flag
+        changed = 0
+        try:
             
-        #start mecab translator
-        srcTxt = stripHTML(note[expField])
-        qjapR, ajapR, engR = find_examples(srcTxt)
-        if len(qjapR) <1:
+            #This should be the dictionary form of the word
+            srcTxt = stripHTML(note[expField])
+            
+            #wtfdowedo
+            qjapR, ajapR, engR = find_examples(srcTxt)
+            if len(qjapR) <1:
+                return False
+            
+            Examples = '<br>'.join(ajapR)
+            Questions = '<br>'.join(qjapR)
+            English = '<br>'.join(engR)
+            shortestJapanese = ajapR[0]
+            #format shortestJapanese
+            shortestJapanese = stripHTML(shortestJapanese)
+            shortestJapanese = re.sub('(\[.*?\])', '', shortestJapanese)
+            
+            
+            if(note['Tatoeba Examples'] != Examples or
+            note['Tatoeba English'] != English or
+            note['Tatoeba Questions'] != Questions or 
+            note['Tatoeba Shortest'] != shortestJapanese):
+                note['Tatoeba Examples'] = Examples
+                note['Tatoeba English'] = English
+                note['Tatoeba Questions'] = Questions
+                note['Tatoeba Shortest'] = shortestJapanese
+                return True
             return False
+        except KeyError:
+            return False
+                   
+
+def add_examples_focusLost(flag, note, fidx):
+    
+        #connect to database
+        connection = sqlite3.connect(databasePath)
+        global cursor
+        cursor = connection.cursor()
         
-        Examples = '<br>'.join(ajapR)
-        Questions = '<br>'.join(qjapR)
-        English = '<br>'.join(engR)
-        shortestJapanese = ajapR[0]
-        #format shortestJapanese
-        shortestJapanese = stripHTML(shortestJapanese)
-        shortestJapanese = re.sub('(\[.*?\])', '', shortestJapanese)
+        #If event not coming from src field then cancel
+        if fidx != note._fmap[expField][0]:
+            return flag      
         
         
-        if(note['Tanaka Examples'] != Examples or
-        note['Tanaka English'] != English or
-        note['Tanaka Questions'] != Questions or 
-        note['Tanaka Shortest'] != shortestJapanese):
-            note['Tanaka Examples'] = Examples
-            note['Tanaka English'] = English
-            note['Tanaka Questions'] = Questions
-            note['Tanaka Shortest'] = shortestJapanese
-            return True
-        return False
-    except KeyError:
-        return False
- 
+        if False == doNote(note):
+            return flag
+        return True
+    
+        cursor.close()
+    
+        
+def bulkAdd(browser):
+    nids=browser.selectedNotes()
+    
+    mw.checkpoint("Bulk-add Tatoeba")
+    mw.progress.start()
+    
+    #connect to database
+    connection = sqlite3.connect(databasePath)
+    global cursor
+    cursor = connection.cursor()
+    
+    #For each seleccted card
+    for nid in nids:
+        note = mw.col.getNote(nid)
+    
+        #Check if we should do it
+        #First check to see if the fields exist
+        
+        #If field check fails then cancel (does any field not exist and are all of them full?
+        ##skip, deal with it in doNote
+        
+        #do the note
+        if True == doNote(note, 1):
+            note.flush()
+            
+    #save
+    cursor.close()
+    mw.progress.finish()
+    mw.reset()        
+    
+
 def setupMenu(browser):
-    a = QAction("Add Tanaka examples", browser)
+    a = QAction("Add Tatoeba examples", browser)
     browser.connect(a, SIGNAL("triggered()"), lambda e=browser: bulkAdd(e))
     browser.form.menuEdit.addSeparator()
     browser.form.menuEdit.addAction(a)
-
     
-from anki.hooks import addHook
 
-addHook('editFocusLost', add_examples_focusLost)
-
-
-#make menu item
-
-
+if __name__ == '__main__':
     
-addHook("browser.setupMenus", setupMenu)
+    createExamplesDatabase()
+    #do tests
+    
+    #connect to database
+    connection = sqlite3.connect(databasePath)
+    global cursor
+    cursor = connection.cursor()
+    
+    ##How many
+    howManyExamples(unicode('日'))
+    ##
+    find_examples(unicode('日'))
+    
+    cursor.close()
+else:
+    print None
+    
+    #addHook('editFocusLost', add_examples_focusLost)
+    #make menu item
+    #addHook("browser.setupMenus", setupMenu)
