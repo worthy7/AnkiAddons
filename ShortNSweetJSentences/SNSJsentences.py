@@ -52,22 +52,11 @@ def createExamplesDatabase():
     
     cursor.execute('PRAGMA encoding = "UTF-8";')
     
-    
-    #english examples go here
-#     cursor.execute("""CREATE TABLE EngExamples (ID INT, sentence ntext)
-#                """)
-    
-    #japanese examples go here, using Mecab as a tokenizer
-#     cursor.execute("CREATE TABLE JapExamples (ID INT,  sentence ntext)")
-    
+
     #both examples in this table
     cursor.execute("""CREATE TABLE examples (JID INT PRIMARY KEY, jSentence ntext, eSentence ntext)
            """)
         
-    #links table
-#     cursor.execute("""CREATE TABLE links
-#               (index1 INT  SECONDARY KEY , index2  INT  SECONDARY KEY) 
-#            """)
     
     #create word table
     cursor.execute("""CREATE TABLE wordLinks
@@ -79,13 +68,6 @@ def createExamplesDatabase():
            sense INT)""")
     
     
-
-    #ENG - JAP LINKS
-#     with open('links_jpneng.csv', 'rb') as input_file:
-#         reader = csv.reader(input_file, delimiter="\t")
-#         engJap2db = [(i[0], i[1]) for i in reader]
-#     cursor.executemany("INSERT INTO links (index1, index2) VALUES (?, ?);", engJap2db)
-    
     #BOTH SENTENCES
     #japSentence, engSentence, JapID, engID
     reg = re.compile('A:(.*)\t(.*)#ID=.*_(.*)')
@@ -95,32 +77,10 @@ def createExamplesDatabase():
     for i in content[0:len(content):2]:
         fields  = reg.match(unicode(i))
         addIn = fields.group(1, 2, 3)
-#         if addIn[2] in inarray and addIn[0] != inarray[addIn[2]][0]:
-#             print addIn[0]
-#             print addIn[1]
-#             print inarray[addIn[2]][0]
-#             print inarray[addIn[2]][1]
         inarray.append(addIn)
-        #inarray.append((addIn))
         
         
     cursor.executemany("INSERT OR IGNORE INTO examples (jSentence, eSentence, JID) VALUES (?, ?, ?);", inarray)
-    
-    
-    #SENTENCES
-#     with open('sentences_jpeng_sorted.csv', 'rb') as input_file:
-#         reader = csv.reader(input_file, delimiter="\t")
-#         eng_db = []
-#         jap_db = []
-#         for i in reader:
-#             if i[1] == 'eng':
-#                 eng_db.append((i[0], unicode(i[2])))
-#             elif i[1] == 'jpn':
-#                 jap_db.append((i[0], unicode(i[2])))
-
-#     cursor.executemany("INSERT INTO EngExamples (ID, sentence) VALUES (?, ?);", eng_db)
-#     cursor.executemany("INSERT INTO JapExamples (ID, sentence) VALUES (?, ?);", jap_db)
-    
     
     
     #WORD - SENTENCE LINKS
@@ -134,11 +94,7 @@ def createExamplesDatabase():
 
     
     conn.commit()
-    print 'Made DB'
-#     print [x for x in cursor.execute('select * from EngExamples LIMIT 5')]
-#     print [x for x in cursor.execute('select * from JapExamples LIMIT 5')]
-#     print [x for x in cursor.execute('select * from links LIMIT 5')]
-    print [x for x in cursor.execute('select * from wordLinks LIMIT 5')]
+    print 'Made DB' print [x for x in cursor.execute('select * from wordLinks LIMIT 5')]
     print [x for x in cursor.execute('select * from examples LIMIT 5')]
     conn.close
     
