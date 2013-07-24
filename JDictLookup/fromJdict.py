@@ -11,7 +11,7 @@ from PyQt4.QtGui import *
 
 import japaneseDict
 from japaneseexamples import japanese_examples
-
+from ShortNSweetJSentences import SNSJsentences
 
 expField = 'Expression'
 definitionField = 'Dictionary Definition'
@@ -41,7 +41,7 @@ def getMeaning(word, isBulk):
     
     #cheeky get num of results from tanaka
     for i in range(0,len(results)):
-        results[i] = results[i] +  (unicode(japanese_examples.howManyExamples(results[i][0])),)
+        results[i] = results[i] +  (unicode(SNSJsentences.howManyExamples(results[i][0])),)
     
     #build unique dict
     resultsByKey = dict()

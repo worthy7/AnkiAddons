@@ -17,14 +17,12 @@ import sqlite3
 import re
 import cPickle as pickle
 import codecs
-from collections import defaultdict
-
 
 
 
 try:
     import japaneseDict
-    from japaneseexamples import japanese_examples
+    from ShortNSweetJSentences import SNSJsentences
 except:
     pass
 #from japaneseexamples import japanese_examples
@@ -423,6 +421,9 @@ class WordSuggestor(QtGui.QWidget):
         self.loadIgnoredWords()
         #self.save()
         #self.save()
+        
+        
+        
         print self.knownKanjis
         
         print self.knownWords
@@ -721,7 +722,7 @@ class WordSuggestor(QtGui.QWidget):
         
         #cheeky get num of results from tanaka
         for i in range(0,len(results)):
-            results[i] = results[i] +  (unicode(japanese_examples.howManyExamples(results[i][0])),)
+            results[i] = results[i] +  (unicode(SNSJsentences.howManyExamples(results[i][0])),)
         
         #build unique dict
         resultsByKey = dict()
