@@ -1,11 +1,7 @@
 #!/usr/bin/python
 #-*- coding: utf-8 -*-
-# File: japanese_examples.py
-# Description: Looks for example sentences in the Tatoeba Corpus for the current card's expression.
-# This addon was first based on Andreas Klauer's "kanji_info" plugin, and is a modified version
-# of Guillaume VIRY's example sentences plugin for Anki 1.
-#
-# Author: Guillaume VIRY
+# Description: Looks for example sentences in the Tatoeba Corpus, matches by sense and shortest
+# Author: Ian Worthington
 # License:     GPL
 
 # --- initialize kanji database ---
@@ -28,6 +24,8 @@ EList = collections.namedtuple('exampleList',['qjap', 'ejap', 'eng'])
 
 # file containing the Tatoeba corpus sentences
 
+
+
 #cursor for database stuff
 #cursor = None
 
@@ -47,8 +45,8 @@ def createExamplesDatabase():
     if os.path.exists(databasePath):
         return
     #os.remove(databasePath)
-    conn = sqlite3.connect(databasePath)
-    cursor = conn.cursor()
+#     conn = sqlite3.connect(databasePath)
+#     cursor = conn.cursor()
     
     cursor.execute('PRAGMA encoding = "UTF-8";')
     
@@ -93,22 +91,22 @@ def createExamplesDatabase():
         
 
     
-    conn.commit()
-    print 'Made DB' print [x for x in cursor.execute('select * from wordLinks LIMIT 5')]
+    connection.commit()
+    print 'Made DB' 
+    print [x for x in cursor.execute('select * from wordLinks LIMIT 5')]
     print [x for x in cursor.execute('select * from examples LIMIT 5')]
-    conn.close
+#     conn.close
     
 
 def howManyExamples(expression):
-    connection = sqlite3.Connection(databasePath)
-    cursor = connection.cursor()
+
     
-    results = cursor.execute('SELECT count(*) FROM wordLinks WHERE keyword = (?)', [expression])
+    results = cursor.execute('SELECT * FROM wordLinks WHERE keyword = (?)', [expression])
     
-    number = results.fetchone()[0]
-    connection.close()
+    number = len(results.fetchall())
+    #connection.close()
     
-    print number
+    #print number
     return number
 
 
@@ -212,9 +210,9 @@ def doNote(note):
 def add_examples_focusLost(flag, note, fidx):
     
         #connect to database
-        connection = sqlite3.connect(databasePath)
+        #connection = sqlite3.connect(databasePath)
         global cursor
-        cursor = connection.cursor()
+        #cursor = connection.cursor()
         
         #If event not coming from src field then cancel
         if fidx != note._fmap[expField][0]:
@@ -235,9 +233,9 @@ def bulkAdd(browser):
     mw.progress.start()
     
     #connect to database
-    connection = sqlite3.connect(databasePath)
+    #connection = sqlite3.connect(databasePath)
     global cursor
-    cursor = connection.cursor()
+    #cursor = connection.cursor()
     
     #For each seleccted card
     for nid in nids:
@@ -271,11 +269,16 @@ if __name__ == '__main__':
     #os.remove(databasePath)
     createExamplesDatabase()
     #do tests
+    #Connect to DB
+    createExamplesDatabase()
+    global cursor
+    global connection
+    connection = sqlite3.Connection(databasePath)
+    cursor = connection.cursor()
     
     #connect to database
-    connection = sqlite3.connect(databasePath)
-    global cursor
-    cursor = connection.cursor()
+    #connection = sqlite3.connect(databasePath)
+    #cursor = connection.cursor()
     
     ##How many
     howManyExamples(unicode('日'))
@@ -287,6 +290,11 @@ if __name__ == '__main__':
     cursor.close()
 else:
     print None
+
+    createExamplesDatabase()
+    connection = sqlite3.Connection(databasePath)
+    cursor = connection.cursor()
+
     
     addHook('editFocusLost', add_examples_focusLost)
     #make menu item
