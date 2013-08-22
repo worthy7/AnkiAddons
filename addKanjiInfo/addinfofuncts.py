@@ -24,6 +24,7 @@ import addinfofuncts
 import kanjidamageinfo
 import kanjistories
 import addjpvocab
+import addBestKanjiWord
 
 def getKeyFromList(titleText, labelText, strings):
         
@@ -54,6 +55,10 @@ def setupMenu(browser):
     d = QAction("Add JLPT Vocab", browser)
     browser.connect(d, SIGNAL("triggered()"), lambda e=browser: onJPVocab(e))
     kanjiExtrasMenu.addAction(d)
+    
+    f = QAction("Add Common Vocab", browser)
+    browser.connect(f, SIGNAL("triggered()"), lambda e=browser: onCommonVocab(e))
+    kanjiExtrasMenu.addAction(f)
         
 def onKDStories(browser):
     kanjidamageinfo.addKDStories(browser.selectedNotes())
@@ -64,7 +69,10 @@ def onExtraStories(browser):
 
 def onJPVocab(browser):
     addjpvocab.addJPVocab(browser.selectedNotes())
-
+    
+def onCommonVocab(browser):
+    addBestKanjiWord.addCommonVocab(browser.selectedNotes())
+    
 addHook("browser.setupMenus", setupMenu)
 
 

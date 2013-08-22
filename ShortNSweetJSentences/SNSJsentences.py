@@ -9,6 +9,7 @@
 from aqt import mw
 import os
 import re
+import japanese
 from japanese.reading import mecab
 import csv
 from anki.utils import stripHTML
@@ -18,6 +19,8 @@ import collections
 import sqlite3
 from anki.hooks import addHook
 import time
+import codecs
+
 
 
 EList = collections.namedtuple('exampleList',['qjap', 'ejap', 'eng'])
@@ -37,22 +40,25 @@ MAX = 3
 
 this_dir, this_filename = os.path.split(__file__)
 databasePath = os.path.join(this_dir, "tatoebaExamples.db")
-
+examplesPath = os.path.join(this_dir, "japanese_examples.utf")
 
 
 def createExamplesDatabase():
     
+    
     if os.path.exists(databasePath):
-        return
-    #os.remove(databasePath)
-#     conn = sqlite3.connect(databasePath)
-#     cursor = conn.cursor()
+        #comment this line to force remake
+        #return
+        os.remove(databasePath)
+    
+    conn = sqlite3.connect(databasePath)
+    cursor = conn.cursor()
     
     cursor.execute('PRAGMA encoding = "UTF-8";')
     
 
     #both examples in this table
-    cursor.execute("""CREATE TABLE examples (JID INT PRIMARY KEY, jSentence ntext, eSentence ntext)
+    cursor.execute("""CREATE TABLE examples (JID INT PRIMARY KEY, jSentence ntext, furigana ntext, eSentence ntext)
            """)
         
     
@@ -69,16 +75,64 @@ def createExamplesDatabase():
     #BOTH SENTENCES
     #japSentence, engSentence, JapID, engID
     reg = re.compile('A:(.*)\t(.*)#ID=.*_(.*)')
+    kanjiReg = re.compile(ur'[\u4e00-\u9fbf]')
     inarray = []
-    with open('japanese_examples.utf', 'rb') as input_file:
+    with codecs.open(examplesPath, encoding='utf-8') as input_file:
         content = input_file.readlines()
-    for i in content[0:len(content):2]:
-        fields  = reg.match(unicode(i))
-        addIn = fields.group(1, 2, 3)
+        
+    
+    lineNum = 0
+    maxLineNum = (len(content))/2
+    for num in range(lineNum, maxLineNum):
+        i, jLine = content[num*2:(num*2)+2]
+        print str(num) + '/' + str(maxLineNum)
+        #get rid of that newline
+        jLine = jLine.rstrip('\n')
+        i = i.rstrip('\n')
+        fields  = reg.findall(i)[0]
+        
+        furiganaSentence = fields[0]
+        
+        #for each match of (akjhfkajsdhfkj .... P    {
+        #dictionary word (kana) {how it appears in sentence}
+        #霓､�ｺ郢ｧ�ｽ邵ｺ蜷ｶ��{邵ｺ蜷ｶ�急
+        for m in jLine.split(' ')[1:]:
+            #0 is always just B so ignore it.
+            dictPart = re.findall('(.*?)[\\(|\\{|\n|\\[]', m)
+            if dictPart == []:
+                dictPart = m
+            else:
+                dictPart = dictPart[0]
+                
+            
+            #get what is the version in the original sentence {}
+            sentencePart = re.findall('\{(.*?)\}', m)
+            if sentencePart == []:
+                sentencePart = m
+            else:
+                sentencePart = sentencePart[0]
+            
+                
+            #if there's no kanji then there's no problem
+            if kanjiReg.findall(unicode(sentencePart)) == []:
+                continue
+            
+            #if there is a kata version then use it
+            kataPart = re.findall('\((.*?)\)', m)
+            if kataPart == []:
+                #use mecab to get the sentence part
+                #kataPart = 'test'
+                kataPart = mecab.reading(sentencePart)
+            else:
+                kataPart = kataPart[0]
+            
+            furiganaSentence = re.sub(unicode(sentencePart), unicode(sentencePart+'['+kataPart+']'), furiganaSentence)
+            
+        addIn = (fields[0], fields[1], fields[2], furiganaSentence )
         inarray.append(addIn)
         
         
-    cursor.executemany("INSERT OR IGNORE INTO examples (jSentence, eSentence, JID) VALUES (?, ?, ?);", inarray)
+    cursor.executemany("INSERT OR IGNORE INTO examples (jSentence,  eSentence, JID, furigana) VALUES (?, ?, ?, ?);", inarray)
     
     
     #WORD - SENTENCE LINKS
@@ -91,11 +145,11 @@ def createExamplesDatabase():
         
 
     
-    connection.commit()
+    conn.commit()
     print 'Made DB' 
     print [x for x in cursor.execute('select * from wordLinks LIMIT 5')]
     print [x for x in cursor.execute('select * from examples LIMIT 5')]
-#     conn.close
+    conn.close
     
 
 def howManyExamples(expression):
@@ -110,19 +164,83 @@ def howManyExamples(expression):
     return number
 
 
+
 def getResults(expression):
-        results = cursor.execute('''Select * from (SELECT E.jSentence,
+    results = cursor.execute('''Select * from (SELECT 
+                            E.jSentence,
                             E.eSentence,
                             WL.keyword_offset, 
                             WL.keyword_length,
                             WL.sense,
-                            LENGTH(E.jSentence)
+                            LENGTH(E.jSentence),
+                            E.furigana
+                            FROM examples AS E 
+                                JOIN wordLinks as WL ON E.JID=WL.jap_Sentence_ID  
+                                WHERE WL.keyword=(?)
+                                ORDER BY LENGTH(E.jSentence) DESC) 
+                                GROUP by sense
+                            ''', [expression])
+    
+#     resultsList = results.fetchall()
+#     print len(resultsList)
+#     for i in resultsList:
+#         print '--------'
+#         print 'jsen:' + unicode(i[0])
+#         print 'esen:' + unicode(i[1])
+#         print 'offset:' + unicode(i[2])
+#         print 'len:' + unicode(i[3])
+#         print 'sense:' + unicode(i[4])
+#         print 'senLen:' + unicode(i[5])
+    return results
+    
+    
+def getResultsTest(expression):
+        results = cursor.execute('''Select * from (SELECT 
+                            E.jSentence,
+                            E.eSentence,
+                            WL.keyword_offset, 
+                            WL.keyword_length,
+                            WL.sense,
+                            LENGTH(E.jSentence),
+                            WL.entry_id,
+                            jap_Sentence_ID,
+                            E.furigana
                             FROM examples AS E 
                             JOIN wordLinks as WL ON E.JID=WL.jap_Sentence_ID  
                             WHERE WL.keyword=(?)
-                            ORDER BY LENGTH(E.jSentence) DESC) 
-                            GROUP by sense
+                            GROUP BY jap_Sentence_ID
+                            ORDER BY LENGTH(E.jSentence) DESC)
                             ''', [expression])
+        
+        resultsList = results.fetchall()
+        actualResults = dict()
+        
+
+        for i in resultsList:
+            actualResults[unicode(i[4]) + unicode(i[6])] = i
+            print '--ORIGINAL------'
+            print 'jsen:' + unicode(i[0])
+            print 'esen:' + unicode(i[1])
+            print 'offset:' + unicode(i[2])
+            print 'len:' + unicode(i[3])
+            print 'sense:' + unicode(i[4])
+            print 'senLen:' + unicode(i[5])
+            print 'entryId:' + unicode(i[6])
+            print 'sentenceId:' + unicode(i[7])
+            print 'furigana:' + unicode(i[8])
+            
+        for i in actualResults.itervalues():
+            
+            print '----REMOVEDDUPE----'
+            print 'jsen:' + unicode(i[0])
+            print 'esen:' + unicode(i[1])
+            print 'offset:' + unicode(i[2])
+            print 'len:' + unicode(i[3])
+            print 'sense:' + unicode(i[4])
+            print 'senLen:' + unicode(i[5])
+            print 'entryId:' + unicode(i[6])
+            print 'sentenceId:' + unicode(i[7])
+            print 'furigana:' + unicode(i[8])
         return results
     
 def find_examples(expression):
@@ -143,35 +261,43 @@ def find_examples(expression):
         print 'len:' + unicode(i[3])
         print 'sense:' + unicode(i[4])
         print 'senLen:' + unicode(i[5])
+        print 'furigana:' + unicode(i[6])
         
         #English can be added
         examples_eng.append(i[1])
         
         #get a reading version of jap sentence for answer
-        japAnswer = mecab.reading(i[0])
+        japAnswer = i[6]
         
         expressionForm = i[0][(i[2]+1):(i[2]+i[3]+1)]
+        
         #this replaces the word we want with the underline
         exampleQ = i[0].replace(expressionForm ,'<span class=focusword>_____</span>')
         
-        
+        ##originally we got this separate but now we're chaging to using the pre-furiversion below
         #for original sentence make sure to search the reading version of the term
-        expression_reading = mecab.reading(expressionForm)
+        #expression_reading = mecab.reading(expressionForm)
+        
+        #find the expression form within the furi verison and try to grab furigana after it
+        
+        
+        #find what we need to replace: either the expression alone, or including the furigana
+        replaceThis = ''.join(re.findall('(' + expressionForm + '\[.*?\]|' + expressionForm +')', japAnswer))
         #first try to replace using the reading version
-        replacedJapAnswer = japAnswer.replace(expression_reading ,'<span class=focusword>'+expression_reading +'</span>')
+        replacedJapAnswer = japAnswer.replace(replaceThis, '<span class=focusword>'+ replaceThis +'</span>')
         
         #if it failed to replace using reading version then just replace the normal
-        if replacedJapAnswer == japAnswer:
-            replacedJapAnswer = japAnswer.replace(expressionForm ,'<span class=focusword>'+expressionForm +'</span>')
+#         if replacedJapAnswer == japAnswer:
+#             replacedJapAnswer = japAnswer.replace(expressionForm ,'<span class=focusword>'+expressionForm +'</span>')
         exampleJ = replacedJapAnswer        
                 
         #add jap and question
         examples_question.append(exampleQ)
         examples_jap.append(exampleJ)
         
-        print unicode(examples_question)
-        print unicode(examples_jap)
-        print unicode(examples_eng)
+        print unicode(examples_question[0])
+        print unicode(examples_jap[0])
+        print unicode(examples_eng[0])
 
     return EList(examples_question,examples_jap,examples_eng)
     
@@ -265,33 +391,44 @@ def setupMenu(browser):
     
 
 if __name__ == '__main__':
-    
-    #os.remove(databasePath)
+
     createExamplesDatabase()
     #do tests
     #Connect to DB
-    createExamplesDatabase()
-    global cursor
-    global connection
-    connection = sqlite3.Connection(databasePath)
-    cursor = connection.cursor()
+#     os.remove(databasePath)
+# 
+#     global cursor
+#     global connection
+#     connection = sqlite3.Connection(databasePath)
+#     cursor = connection.cursor()
+#     
+#     createExamplesDatabase()
     
     #connect to database
-    #connection = sqlite3.connect(databasePath)
-    #cursor = connection.cursor()
-    
+    connection = sqlite3.connect(databasePath)
+    cursor = connection.cursor()
+
     ##How many
-    howManyExamples(unicode('日'))
-    ##
+    print howManyExamples(unicode('ご飯'))
+    #     ##
+    find_examples(unicode('ご飯'))
+    test = unicode('ご飯')
     start_time = time.time()
-    getResults(unicode('冷凍庫'))
+    getResultsTest(test)
+    print '----#################-----'
+    getResults(test)
     print time.time() - start_time, "seconds"
     
     cursor.close()
+
+
+    print 
+
 else:
-    print None
 
     createExamplesDatabase()
+    
+    
     connection = sqlite3.Connection(databasePath)
     cursor = connection.cursor()
 

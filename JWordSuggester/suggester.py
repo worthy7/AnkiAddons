@@ -34,6 +34,15 @@ edictPath = os.path.join(this_dir, "edict_freq.txt")
 ignorePath = os.path.join(this_dir, "ignoredList.txt")
 elementsPicklePath = os.path.join(this_dir, "elements.pickle")
 
+edictPath2 = os.path.join(this_dir, "edict-freq-20081002") 
+edictPicklePath2 = os.path.join(this_dir, "edict2.pickle")
+
+
+use2 = True
+if use2:
+    edictPath = os.path.join(this_dir, "edict-freq-20081002") 
+    edictPicklePath = os.path.join(this_dir, "edict2.pickle")
+    
 
 class WordSuggestor(QtGui.QWidget):
     
@@ -188,10 +197,7 @@ class WordSuggestor(QtGui.QWidget):
             
             self.WordCardsFieldSelector.setCurrentIndex(wordFIndex)
         
-        
-        
-            
-            
+           
             
     def saveElementsPickle(self):
         
@@ -711,6 +717,70 @@ class WordSuggestor(QtGui.QWidget):
                 edictDict[expression] = entry
             pickle.dump(edictDict, open( edictPicklePath, "wb" ), -1)
         
+    def createDictionaryPickle2(self):
+        def file_len(fname):
+            with open(fname) as f:
+                for i, l in enumerate(f):
+                    pass
+            return i + 1
+        
+        filelength = str( file_len(edictPath2))
+        
+        edictDict = dict()
+        with open(edictPath2, 'rb') as input_file:
+            reader = csv.reader(input_file, delimiter="/")
+# あがり目 [あがりめ] /(n) (1) eyes slanted upward/(2) rising tendency/###50/
+# あきたこまち /(n) Akitakomachi (variety of rice)/###3290/
+
+
+            count = 0
+            
+            for i in reader:
+                
+                percentOfTotal = i[len(i)-2][3:len(i[len(i)-2])] #maybe -2
+                
+                
+                print str(count) + ' / ' + filelength
+                count = count + 1
+                
+                #detect if kanji and save them
+                firstfield = i[0]
+                kanjis = []
+                kanjis = re.findall(ur'[\u4e00-\u9fbf]', unicode(firstfield))
+                
+                #disable this to enable all word, not just kanji words
+                if len(kanjis) == 0:
+                    continue
+                
+                #strip readings
+                expression = re.findall(ur'(.*)\[.*', unicode(firstfield))[0]
+                
+                #skip dupes
+                if expression in edictDict:
+                    if edictDict[expression]['pFlag']:
+                        continue
+                
+                
+                
+                #if there is a reading get it, else its the expression
+                reading = re.findall(ur'.*\[(.*)\]', unicode(firstfield))[0]
+                if not reading:
+                    reading = expression
+                meaning = unicode(','.join(i[1::len(i)-1])) #maybe more minus.....
+                    
+                    
+                popular = re.findall(ur'\(P\)', meaning)
+                if popular:
+                    popular = 1
+                else:
+                    popular = 0
+                    
+                    #{'one': 1, 'two': 2, 'three': 3}
+                #percentOfTotal, expression, reading , meaning, popular, kanjis[])
+                entry = {'reading':reading, 'meaning':meaning, 'pFlag':popular, 'kanjis':kanjis, 'percentOfTotal':float(percentOfTotal)}
+                edictDict[expression] = entry
+            pickle.dump(edictDict, open( edictPicklePath2, "wb" ), -1)
+        
         
     
     def getBestMeaning(self, word):
@@ -728,7 +798,9 @@ class WordSuggestor(QtGui.QWidget):
         resultsByKey = dict()
         for r in results:
             resultsByKey[r[0]+' '+ r[1] +' '+ r[2]+' '+ r[3]+' '+ r[4] + ' ' +r[5] ] = r
-           
+
+        #WTF no sorting????????
+        
         #(expression, unicode(), glossary, conjugations, source, count)
         if results:
             return results[0]
@@ -740,10 +812,15 @@ class WordSuggestor(QtGui.QWidget):
 #         os.remove(databasePath)
 #         self.createDictionaryDatabase()
         #########
+        global use2
+            
         if not os.path.exists(edictPicklePath) and os.path.exists(edictPath):
             #if no pickle, but there is an edict file, read from EDICT, and create the database
             print 'Making dictionary...'
-            self.createDictionaryPickle()
+            if use2 == True:
+                self.createDictionaryPickle2()
+            else:
+                self.createDictionaryPickle()
             print 'Dictionary = Finished!'
         print 'Loading dict'
         self.edict = pickle.load(open( edictPicklePath, "rb" ))
