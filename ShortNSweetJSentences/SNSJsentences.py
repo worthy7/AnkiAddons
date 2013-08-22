@@ -9,7 +9,7 @@
 from aqt import mw
 import os
 import re
-from japanese.reading import mecab
+
 import csv
 from anki.utils import stripHTML
 from PyQt4.QtCore import *
@@ -48,9 +48,8 @@ def createExamplesDatabase():
     
     
     if os.path.exists(databasePath):
-
-        #comment this line to force remake
-        #return
+        #comment this line to force a remake
+        return
         os.remove(databasePath)
     
     conn = sqlite3.connect(databasePath)
@@ -99,6 +98,13 @@ def createExamplesDatabase():
         #for each match of (akjhfkajsdhfkj .... P    {
         #dictionary word (kana) {how it appears in sentence}
         #霓､�ｺ郢ｧ�ｽ邵ｺ蜷ｶ��{邵ｺ蜷ｶ�急
+        
+        if int(num) == 13:
+            print 'HELLLLOO'
+        
+        #keep track of last replace
+        lastIndex = 0
+        
         for m in jLine.split(' ')[1:]:
             #0 is always just B so ignore it.
             dictPart = re.findall('(.*?)[\\(|\\{|\n|\\[]', m)
@@ -111,7 +117,7 @@ def createExamplesDatabase():
             #get what is the version in the original sentence {}
             sentencePart = re.findall('\{(.*?)\}', m)
             if sentencePart == []:
-                sentencePart = m
+                sentencePart = dictPart
             else:
                 sentencePart = sentencePart[0]
             
@@ -120,16 +126,31 @@ def createExamplesDatabase():
             if kanjiReg.findall(unicode(sentencePart)) == []:
                 continue
             
+            ###########REALLY we could look up the SENSE in a dictionary to get the reading.
             #if there is a kata version then use it
             kataPart = re.findall('\((.*?)\)', m)
             if kataPart == []:
                 #use mecab to get the sentence part
                 #kataPart = 'test'
-                kataPart = mecab.reading(sentencePart)
+                furi = mecab.reading(sentencePart)
+                #furi = sentencePart+'[BASASS]'
             else:
-                kataPart = kataPart[0]
+                furi = sentencePart+'['+kataPart[0]+']'
             
-            furiganaSentence = re.sub(unicode(sentencePart), unicode(sentencePart+'['+kataPart+']'), furiganaSentence)
+            
+            ##This is complicated to avoid duplicates same word replacements
+            #find last index
+             
+            lastIndex = furiganaSentence.rfind(']')
+            if lastIndex == -1:
+                lastIndex = 0
+                
+            #then cut out a chunk of string which will be replaced
+            chunk = furiganaSentence[lastIndex:]
+            furiganaSentence = furiganaSentence[0:lastIndex] + chunk.replace(sentencePart, unicode(furi), 1)
+            
+            #find where we are going to do the replace
+            
             
         addIn = (fields[0], fields[1], fields[2], furiganaSentence )
         inarray.append(addIn)
@@ -148,15 +169,11 @@ def createExamplesDatabase():
         
 
     
-<<<<<<< HEAD
     conn.commit()
-=======
-    connection.commit()
->>>>>>> branch 'master' of https://github.com/Worthy7/AnkiAddons.git
     print 'Made DB' 
     print [x for x in cursor.execute('select * from wordLinks LIMIT 5')]
     print [x for x in cursor.execute('select * from examples LIMIT 5')]
-#     conn.close
+    conn.close
     
 
 def howManyExamples(expression):
@@ -279,7 +296,6 @@ def find_examples(expression):
         expressionForm = i[0][(i[2]+1):(i[2]+i[3]+1)]
         
         #this replaces the word we want with the underline
-        exampleQ = i[0].replace(expressionForm ,'<span class=focusword>_____</span>')
         
         ##originally we got this separate but now we're chaging to using the pre-furiversion below
         #for original sentence make sure to search the reading version of the term
@@ -288,10 +304,17 @@ def find_examples(expression):
         #find the expression form within the furi verison and try to grab furigana after it
         
         
-        #find what we need to replace: either the expression alone, or including the furigana
-        replaceThis = ''.join(re.findall('(' + expressionForm + '\[.*?\]|' + expressionForm +')', japAnswer))
+        #find what we need to replace: either the expression alone, or including the furigana or the expression from mecab
+        mecabReading = re.escape( mecab.reading(expressionForm))
+        finderRE = re.compile( '(' + 
+                                         expressionForm + '\[.*?\]' + 
+                                         '|' + expressionForm +
+                                         '|' +  mecabReading + ')')
+        replaceThis = re.findall(finderRE, japAnswer)
+        replaceThis = replaceThis[0]
         #first try to replace using the reading version
         replacedJapAnswer = japAnswer.replace(replaceThis, '<span class=focusword>'+ replaceThis +'</span>')
+        exampleQ = japAnswer.replace(replaceThis ,'<span class=focusword>_____</span>')
         
         #if it failed to replace using reading version then just replace the normal
 #         if replacedJapAnswer == japAnswer:
@@ -398,11 +421,10 @@ def setupMenu(browser):
     
 
 if __name__ == '__main__':
-
+    from reading import mecab
     createExamplesDatabase()
     #do tests
     #Connect to DB
-<<<<<<< HEAD
 #     os.remove(databasePath)
 # 
 #     global cursor
@@ -411,24 +433,11 @@ if __name__ == '__main__':
 #     cursor = connection.cursor()
 #     
 #     createExamplesDatabase()
-=======
-    createExamplesDatabase()
-    global cursor
-    global connection
-    connection = sqlite3.Connection(databasePath)
-    cursor = connection.cursor()
->>>>>>> branch 'master' of https://github.com/Worthy7/AnkiAddons.git
     
     #connect to database
-<<<<<<< HEAD
     connection = sqlite3.connect(databasePath)
     cursor = connection.cursor()
 
-=======
-    #connection = sqlite3.connect(databasePath)
-    #cursor = connection.cursor()
-    
->>>>>>> branch 'master' of https://github.com/Worthy7/AnkiAddons.git
     ##How many
     print howManyExamples(unicode('ご飯'))
     #     ##
@@ -446,16 +455,10 @@ if __name__ == '__main__':
     print 
 
 else:
-<<<<<<< HEAD
-
+    from japanese.reading import mecab
     createExamplesDatabase()
     
     
-=======
-    print None
-
-    createExamplesDatabase()
->>>>>>> branch 'master' of https://github.com/Worthy7/AnkiAddons.git
     connection = sqlite3.Connection(databasePath)
     cursor = connection.cursor()
 

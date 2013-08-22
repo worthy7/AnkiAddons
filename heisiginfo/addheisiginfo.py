@@ -14,7 +14,7 @@ import os, re
 from anki.utils import stripHTML
 import pickle
 # import the main window object (mw) from ankiqt
-from aqt import mw
+#
 
 #version they want to use, 2010 or old
 
@@ -43,9 +43,9 @@ heisigVersion = '2010'
 
 
 def makePickle():
-    if os.path.exists(RTKPicklePath):
-        return
-    
+#     if os.path.exists(RTKPicklePath):
+#         return
+    global kanjiIndex
     
     with open(allRTK, 'r') as f:
         content = f.read().splitlines()
@@ -58,6 +58,7 @@ def makePickle():
     pickle.dump(kanjiIndex, open( RTKPicklePath, "wb" ), -1)
     
 def readRTK():
+    global kanjiIndex
     kanjiIndex = pickle.load(open( RTKPicklePath, "rb" ))
     
 def getHeisigVersion():
@@ -376,9 +377,13 @@ def onHardestHeisigNumber(browser):
 
 
 if __name__ == '__main__':
-    makePickle()
+#     makePickle()
+    print 'coooom'
+    readRTK()
+    print lookupKanjiInfo(u'太陽', 'keyword')
 else:
-    makePickle()
+    from aqt import mw
+#     makePickle()
     addHook("browser.setupMenus", setupMenu)
     
     addHook('editFocusLost', addKanjiKeywords_onFocusLost)
