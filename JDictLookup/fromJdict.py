@@ -10,7 +10,7 @@ from PyQt4.QtGui import *
 
 
 import japaneseDict
-import ShortNSweetJSentences
+from ShortNSweetJSentences import SNSJsentences
 
 expField = 'Expression'
 definitionField = 'Dictionary Definition'

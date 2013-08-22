@@ -9,7 +9,6 @@
 from aqt import mw
 import os
 import re
-import japanese
 from japanese.reading import mecab
 import csv
 from anki.utils import stripHTML
@@ -26,6 +25,8 @@ import codecs
 EList = collections.namedtuple('exampleList',['qjap', 'ejap', 'eng'])
 
 # file containing the Tatoeba corpus sentences
+
+
 
 
 
@@ -47,12 +48,14 @@ def createExamplesDatabase():
     
     
     if os.path.exists(databasePath):
+
         #comment this line to force remake
         #return
         os.remove(databasePath)
     
     conn = sqlite3.connect(databasePath)
     cursor = conn.cursor()
+
     
     cursor.execute('PRAGMA encoding = "UTF-8";')
     
@@ -145,11 +148,15 @@ def createExamplesDatabase():
         
 
     
+<<<<<<< HEAD
     conn.commit()
+=======
+    connection.commit()
+>>>>>>> branch 'master' of https://github.com/Worthy7/AnkiAddons.git
     print 'Made DB' 
     print [x for x in cursor.execute('select * from wordLinks LIMIT 5')]
     print [x for x in cursor.execute('select * from examples LIMIT 5')]
-    conn.close
+#     conn.close
     
 
 def howManyExamples(expression):
@@ -395,6 +402,7 @@ if __name__ == '__main__':
     createExamplesDatabase()
     #do tests
     #Connect to DB
+<<<<<<< HEAD
 #     os.remove(databasePath)
 # 
 #     global cursor
@@ -403,11 +411,24 @@ if __name__ == '__main__':
 #     cursor = connection.cursor()
 #     
 #     createExamplesDatabase()
+=======
+    createExamplesDatabase()
+    global cursor
+    global connection
+    connection = sqlite3.Connection(databasePath)
+    cursor = connection.cursor()
+>>>>>>> branch 'master' of https://github.com/Worthy7/AnkiAddons.git
     
     #connect to database
+<<<<<<< HEAD
     connection = sqlite3.connect(databasePath)
     cursor = connection.cursor()
 
+=======
+    #connection = sqlite3.connect(databasePath)
+    #cursor = connection.cursor()
+    
+>>>>>>> branch 'master' of https://github.com/Worthy7/AnkiAddons.git
     ##How many
     print howManyExamples(unicode('ご飯'))
     #     ##
@@ -425,10 +446,16 @@ if __name__ == '__main__':
     print 
 
 else:
+<<<<<<< HEAD
 
     createExamplesDatabase()
     
     
+=======
+    print None
+
+    createExamplesDatabase()
+>>>>>>> branch 'master' of https://github.com/Worthy7/AnkiAddons.git
     connection = sqlite3.Connection(databasePath)
     cursor = connection.cursor()
 
