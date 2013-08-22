@@ -50,7 +50,6 @@ def createExamplesDatabase():
     if os.path.exists(databasePath):
         #comment this line to force a remake
         return
-        os.remove(databasePath)
     
     conn = sqlite3.connect(databasePath)
     cursor = conn.cursor()
@@ -97,9 +96,9 @@ def createExamplesDatabase():
         
         #for each match of (akjhfkajsdhfkj .... P    {
         #dictionary word (kana) {how it appears in sentence}
-        #霓､�ｺ郢ｧ�ｽ邵ｺ蜷ｶ��{邵ｺ蜷ｶ�急
+        #鬯ｯ�ｮ�ｽ�ｴ鬯ｮ�ｮ�ｽ�｣�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�､�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｺ鬯ｯ�ｩ陝ｷ�｢�ｽ�ｽ�ｽ�｢�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｧ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ鬯ｯ�ｩ隰ｳ�ｾ�ｽ�ｽ�ｽ�ｵ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｺ鬯ｮ�ｯ�ｽ�ｷ�ｽ�ｽ�ｽ�ｷ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｶ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ{鬯ｯ�ｩ隰ｳ�ｾ�ｽ�ｽ�ｽ�ｵ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｺ鬯ｮ�ｯ�ｽ�ｷ�ｽ�ｽ�ｽ�ｷ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｶ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ鬮ｫ�ｲ�ｽ�､�ｽ�ｽ�ｽ�･
         
-        if int(num) == 13:
+        if int(fields[2]) == 156648:
             print 'HELLLLOO'
         
         #keep track of last replace
@@ -107,7 +106,7 @@ def createExamplesDatabase():
         
         for m in jLine.split(' ')[1:]:
             #0 is always just B so ignore it.
-            dictPart = re.findall('(.*?)[\\(|\\{|\n|\\[]', m)
+            dictPart = re.findall('(.*?)[\\(|\\{|\n|\\[|~]', m)
             if dictPart == []:
                 dictPart = m
             else:
@@ -305,11 +304,17 @@ def find_examples(expression):
         
         
         #find what we need to replace: either the expression alone, or including the furigana or the expression from mecab
-        mecabReading = re.escape( mecab.reading(expressionForm))
+        mecabReading = mecab.reading(expressionForm)
+        mecabReading = mecabReading.replace('[', '\[')
+        mecabReading = mecabReading.replace(']', '\]')
+        
+        NoSpaceMecabReading = mecabReading.replace(' ', '')
         finderRE = re.compile( '(' + 
                                          expressionForm + '\[.*?\]' + 
                                          '|' + expressionForm +
-                                         '|' +  mecabReading + ')')
+                                         '|' +  mecabReading + 
+                                         '|' +  NoSpaceMecabReading +
+                                         ')')
         replaceThis = re.findall(finderRE, japAnswer)
         replaceThis = replaceThis[0]
         #first try to replace using the reading version
@@ -422,6 +427,7 @@ def setupMenu(browser):
 
 if __name__ == '__main__':
     from reading import mecab
+    os.remove(databasePath)
     createExamplesDatabase()
     #do tests
     #Connect to DB
@@ -439,10 +445,10 @@ if __name__ == '__main__':
     cursor = connection.cursor()
 
     ##How many
-    print howManyExamples(unicode('ご飯'))
+    print howManyExamples(unicode('散髪屋'))
     #     ##
-    find_examples(unicode('ご飯'))
-    test = unicode('ご飯')
+    find_examples(unicode('散髪屋'))
+    test = unicode('散髪屋')
     start_time = time.time()
     getResultsTest(test)
     print '----#################-----'
