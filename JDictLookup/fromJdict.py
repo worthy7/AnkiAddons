@@ -25,6 +25,7 @@ def getKeyFromList(titleText, labelText, strings):
     d = QInputDialog()
     d.setComboBoxItems(strings)
     d.setWindowTitle(titleText)
+    d.resize(QSize(700, 500))
     d.setLabelText(labelText)
     d.setOption(QInputDialog.UseListViewForComboBoxItems)
     
@@ -45,12 +46,12 @@ def getMeaning(word, isBulk):
     #build unique dict
     resultsByKey = dict()
     for r in results:
-        resultsByKey[r[0]+' '+ r[1] +' '+ r[2]+' '+ r[3]+' '+ r[4] + ' ' +r[5] ] = r
+        resultsByKey[(r[0]+' '+ r[1] +'('+ r[5]+')'+ r[2]+' '+ r[3] + ' ' +r[4]) ] = r
        
     
     #(expression, unicode(), glossary, conjugations, source, count)
     if len(results) > 2 and not isBulk:
-        resultText = getKeyFromList("JDict", "Multiple results found, please select one!", [(r[0]+' '+ r[1] +' '+ r[2]+' '+ r[3]+' '+ r[4] + ' ' +r[5]) for r in results])
+        resultText = getKeyFromList("JDict", "Multiple results found, please select one!", [(r[0]+' '+ r[1] +'('+ r[5]+')'+ r[2]+' '+ r[3] + ' ' +r[4]) for r in results])
         if resultText == None:
             return results[0]
         return resultsByKey[resultText]

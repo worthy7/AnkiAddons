@@ -13,6 +13,7 @@ from anki.hooks import addHook
 import os, re
 from anki.utils import stripHTML
 import pickle
+
 # import the main window object (mw) from ankiqt
 #
 

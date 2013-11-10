@@ -27,6 +27,8 @@ edictPicklePath = os.path.join(this_dir, "edict2.pickle")
 
 
 
+fileWrite = False
+
 heisigWordsPath = os.path.join(this_dir, "heisigVocab.txt")
 heisigLearnerWordsPath = os.path.join(this_dir, "heisigLearnerVocab.txt") 
 					
@@ -215,7 +217,8 @@ def addCommonVocab(nids):
 	#For each seleccted card
 	
 	####bump to file
-	fileout = open(heisigWordsPath, 'w+')
+	if fileWrite:
+		fileout = open(heisigWordsPath, 'w+')
 	
 	for nid in nids:
 		note = mw.col.getNote(nid)
@@ -226,12 +229,15 @@ def addCommonVocab(nids):
 		note[dst] = lookupVocab(srcTxt)
 		#if (note[dst] == ""):
 		#	note[dst] = note['Story']
-		pre = '\t'.join([note['Heisig Number'], srcTxt]) + '\t' + note[dst] + '\n'
-		fileout.write(re.sub('<br>|<br \>', '\t', pre))
+		if fileWrite:
+			pre = '\t'.join([note['Heisig Number'], srcTxt]) + '\t' + note[dst] + '\n'
+			fileout.write(re.sub('<br>|<br \>', '\t', pre))
+		
 		note.flush()
 	mw.progress.finish()
 	mw.reset()
-	fileout.close()
+	if fileWrite:
+		fileout.close()
 	
 	
 def extractKanji(exp):

@@ -86,15 +86,19 @@ def doNote(note):
         
         #add splits of 6
         kanjis = re.findall(ur'[\u4e00-\u9fbf]',srcTxt)
+        
+        
         note['Kanji Removed All'] = re.sub(ur'[\u4e00-\u9fbf]', '_',srcTxt)
-        count = 1
         
-        for k in kanjis:
-            if note['Kanji Removed ' + str(count)] != re.sub(k, '_', srcTxt):
-                changed = 1 
-            note['Kanji Removed ' + str(count)] = re.sub(k, '_', srcTxt)
-            count = count + 1
+        #clear all the kanji fields
+        for i in range(1,7):
+            if len(kanjis) >= i:
+                note['Kanji Removed ' + str(i)] = re.sub(kanjis[i-1], '_', srcTxt)
+            else:
+                note['Kanji Removed ' + str(i)] = ''
         
+        
+        changed =1
     except KeyError:
         raise    
     

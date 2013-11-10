@@ -96,7 +96,7 @@ def createExamplesDatabase():
         
         #for each match of (akjhfkajsdhfkj .... P    {
         #dictionary word (kana) {how it appears in sentence}
-        #鬯ｯ�ｮ�ｽ�ｴ鬯ｮ�ｮ�ｽ�｣�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�､�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｺ鬯ｯ�ｩ陝ｷ�｢�ｽ�ｽ�ｽ�｢�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｧ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ鬯ｯ�ｩ隰ｳ�ｾ�ｽ�ｽ�ｽ�ｵ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｺ鬯ｮ�ｯ�ｽ�ｷ�ｽ�ｽ�ｽ�ｷ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｶ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ{鬯ｯ�ｩ隰ｳ�ｾ�ｽ�ｽ�ｽ�ｵ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｺ鬯ｮ�ｯ�ｽ�ｷ�ｽ�ｽ�ｽ�ｷ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｶ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ鬮ｫ�ｲ�ｽ�､�ｽ�ｽ�ｽ�･
+        #鬯ｯ�ｯ�ｽ�ｮ�ｽ�ｽ�ｽ�ｴ鬯ｯ�ｮ�ｽ�ｮ�ｽ�ｽ�ｽ�｣�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�､�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｺ鬯ｯ�ｯ�ｽ�ｩ髯晢ｽｷ�ｽ�｢�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�｢�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｧ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ鬯ｯ�ｯ�ｽ�ｩ髫ｰ�ｳ�ｽ�ｾ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｵ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｺ鬯ｯ�ｮ�ｽ�ｯ�ｽ�ｽ�ｽ�ｷ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｷ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｶ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ{鬯ｯ�ｯ�ｽ�ｩ髫ｰ�ｳ�ｽ�ｾ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｵ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｺ鬯ｯ�ｮ�ｽ�ｯ�ｽ�ｽ�ｽ�ｷ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｷ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｶ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ鬯ｮ�ｫ�ｽ�ｲ�ｽ�ｽ�ｽ�､�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�ｽ�･
         
         if int(fields[2]) == 156648:
             print 'HELLLLOO'
@@ -123,6 +123,7 @@ def createExamplesDatabase():
                 
             #if there's no kanji then there's no problem
             if kanjiReg.findall(unicode(sentencePart)) == []:
+                lastIndex = furiganaSentence.rfind(sentencePart) + len(sentencePart)
                 continue
             
             ###########REALLY we could look up the SENSE in a dictionary to get the reading.
@@ -146,6 +147,11 @@ def createExamplesDatabase():
                 
             #then cut out a chunk of string which will be replaced
             chunk = furiganaSentence[lastIndex:]
+            
+            #this formats the furigana correctly
+            if lastIndex != 0:
+                furi = ' ' + furi
+                
             furiganaSentence = furiganaSentence[0:lastIndex] + chunk.replace(sentencePart, unicode(furi), 1)
             
             #find where we are going to do the replace
@@ -309,6 +315,7 @@ def find_examples(expression):
         mecabReading = mecabReading.replace(']', '\]')
         
         NoSpaceMecabReading = mecabReading.replace(' ', '')
+        
         finderRE = re.compile( '(' + 
                                          expressionForm + '\[.*?\]' + 
                                          '|' + expressionForm +
@@ -316,7 +323,21 @@ def find_examples(expression):
                                          '|' +  NoSpaceMecabReading +
                                          ')')
         replaceThis = re.findall(finderRE, japAnswer)
-        replaceThis = replaceThis[0]
+        
+        try:
+            replaceThis = replaceThis[0]
+        except IndexError:
+            #This is when shit goes wrong.
+            print 'Wtf:'
+            print '--------'
+            print 'jsen:' + unicode(i[0])
+            print 'esen:' + unicode(i[1])
+            print 'offset:' + unicode(i[2])
+            print 'len:' + unicode(i[3])
+            print 'sense:' + unicode(i[4])
+            print 'senLen:' + unicode(i[5])
+            print 'furigana:' + unicode(i[6])
+            continue
         #first try to replace using the reading version
         replacedJapAnswer = japAnswer.replace(replaceThis, '<span class=focusword>'+ replaceThis +'</span>')
         exampleQ = japAnswer.replace(replaceThis ,'<span class=focusword>_____</span>')
@@ -427,7 +448,8 @@ def setupMenu(browser):
 
 if __name__ == '__main__':
     from reading import mecab
-    os.remove(databasePath)
+    if os.path.exists(databasePath):
+        os.remove(databasePath)
     createExamplesDatabase()
     #do tests
     #Connect to DB
@@ -445,10 +467,10 @@ if __name__ == '__main__':
     cursor = connection.cursor()
 
     ##How many
-    print howManyExamples(unicode('散髪屋'))
+    print howManyExamples(unicode('徹夜'))
     #     ##
-    find_examples(unicode('散髪屋'))
-    test = unicode('散髪屋')
+    find_examples(unicode('徹夜'))
+    test = unicode('徹夜')
     start_time = time.time()
     getResultsTest(test)
     print '----#################-----'

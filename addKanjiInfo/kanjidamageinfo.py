@@ -33,6 +33,8 @@ def readStories():
 	with open(DATA_PATH, 'r') as f:
 		content = f.read().splitlines()
 		#sys.stderr.write(content[0] + "\n")
+		
+		#writing compound and mnumonic could be merged into one bcause they sseem to have rnadom info
 	for line in content:
 		fieldhash = dict(zip(('keyword', 'num', 'useful', 'kanji', 'onr', 'kunr', 'engmeaning', 'kun2', 'eng2meaning', 'mnem', 'compound', 'write', 'tags'),
 							line.split('\t')))
@@ -68,6 +70,13 @@ def addKDStories(nids):
 	if (EngMeaning  is None):
 		return 
 	
+	
+	KDall = addinfofuncts.getKeyFromList("Select field to write to", "Write EVERYTHING to:", fields)
+	if (KDall  is None):
+		return 
+	
+	
+	
 	mw.checkpoint("Add KD Stories")
 	mw.progress.start()
 	#For each seleccted card
@@ -97,6 +106,12 @@ def addKDStories(nids):
 				note[EngMeaning] = kanjiIndex[kanjizz]['engmeaning'].decode('utf8')
 			else:
 				note[EngMeaning] = ""
+								#   1        2          3       4       5      6            7        8         9           10        11          12       13
+								#'keyword', 'num', 'useful', 'kanji', 'onr', 'kunr', 'engmeaning', 'kun2', 'eng2meaning', 'mnem', 'compound', 'write', 'tags' 
+			if kanjiIndex[kanjizz]['engmeaning'] or kanjiIndex[kanjizz]['eng2meaning'] or kanjiIndex[kanjizz]['mnem'] or kanjiIndex[kanjizz]['compound']:
+				note[KDall] = (kanjiIndex[kanjizz]['engmeaning'] + '<p>' + kanjiIndex[kanjizz]['eng2meaning']  + '<p>' + kanjiIndex[kanjizz]['mnem'] + '<p>' + kanjiIndex[kanjizz]['compound'] ).decode('utf8')
+			else:
+				note[KDall] = ""
 			note.flush()
 	mw.progress.finish()
 	mw.reset()
