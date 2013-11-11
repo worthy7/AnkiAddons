@@ -20,10 +20,10 @@ from PyQt4.QtGui import *
 
 joinseparator = ','
 
-#Fields used
-#in					
+# Fields used
+# in					
 expField = 'Expression'
-#out
+# out
 removedKanjiField = 'Kanji Removed '
 
 
@@ -34,19 +34,19 @@ def addKanjiSplits_bulk(nids):
         mw.checkpoint("Add Kanji Splits")
         
         mw.progress.start()
-        #For each seleccted card
+        # For each seleccted card
         for nid in nids:
             note = mw.col.getNote(nid)
             
             
-            #do the note and handle the results
+            # do the note and handle the results
             if False == doNote(note):
                 continue
            
                         
             
-            #Add the data to the dst field
-            if True == doNote(note, expField, kanjiDstField):
+            # Add the data to the dst field
+            if True == doNote(note):
                 note.flush()
         
     except KeyError:
@@ -65,11 +65,11 @@ def addKanjiSplits_onFocusLost(flag, note, fidx):
     try:
     
         
-       #If event not coming from src field then cancel
+       # If event not coming from src field then cancel
         if fidx != note._fmap[expField][0]:
             return flag
         
-        #do the note and handle the results
+        # do the note and handle the results
         if False == doNote(note):
             return flag
         
@@ -81,24 +81,26 @@ def doNote(note):
     
     try:
         changed = 0
-        #Strip out any annoying HTML
+        # Strip out any annoying HTML
         srcTxt = stripHTML(note[expField])
         
-        #add splits of 6
-        kanjis = re.findall(ur'[\u4e00-\u9fbf]',srcTxt)
+        # add splits of 6
+        kanjis = re.findall(ur'[\u4e00-\u9fbf]', srcTxt)
         
         
-        note['Kanji Removed All'] = re.sub(ur'[\u4e00-\u9fbf]', '_',srcTxt)
+        note['Kanji Removed All'] = re.sub(ur'[\u4e00-\u9fbf]', '_', srcTxt)
         
-        #clear all the kanji fields
-        for i in range(1,7):
+        # clear all the kanji fields
+        for i in range(1, 7):
             if len(kanjis) >= i:
-                note['Kanji Removed ' + str(i)] = re.sub(kanjis[i-1], '_', srcTxt)
+                if (note['Kanji Removed ' + str(i)] != re.sub(kanjis[i - 1], '_', srcTxt)):
+                    note['Kanji Removed ' + str(i)] = re.sub(kanjis[i - 1], '_', srcTxt)
+                    changed = 1
             else:
-                note['Kanji Removed ' + str(i)] = ''
+                if (note['Kanji Removed ' + str(i)] != ''):
+                    note['Kanji Removed ' + str(i)] = ''
+                    changed = 1
         
-        
-        changed =1
     except KeyError:
         raise    
     
@@ -109,8 +111,6 @@ def doNote(note):
     
     
 def setupMenu(browser):
-
-
     a = QAction("Add Kanji Splits", browser)
     browser.connect(a, SIGNAL("triggered()"), lambda e=browser: onKanjiSplits(e))
     browser.form.menuEdit.addSeparator()

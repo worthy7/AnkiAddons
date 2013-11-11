@@ -24,95 +24,155 @@ import addinfofuncts
 
 
 
-#Kanji Deck location
-kanjiDeckSearchTerm = "deck:Everything::0 Kanji"
-#Kanji fields:
+
+# Kanji variables are set here
+# Kanji Deck location, wrap it in triples
+kanjiDeckSearchTerm = "deck:'Everything::0 Kanji'"
+# Kanji fields:
 kanjiCardVocabField = 'My Anki Vocab'
 kanjiCardKanjiField = 'Expression'
 
-#Vocab fields to read from:
-vocabCardJapanese = 'Expression'
-vocabCardEnglish = 'English Meaning'
 
-					
-#Vocab gets indexed into here
+# Vocab variables are set here and selected from the browser if using the menu
+# Vocab fields to read from:
+vocabDeckSearchTerm = "mid:1372805886784" 
+vocabCardJapanese = 'Dictionary Form'
+vocabCardEnglish = 'Dictionary Definition'
+# These fields will also be used to update the kanji cards as new vocab is added
+
+# Field to call event on lost focus
+expField = 'Dictionary Form'
+			
+# Vocab gets indexed into here
 vocabIndex = defaultdict(list)
-#Fields used
-#in					
-kanjiCardKanjiField = 'Expression'
-#out
-kanjiCardVocabField = 'Kanji Vocab'
+kanjiCardsIndex = dict()
+
+# Initialize all the kanji cards into a hash.
+def indexKanji():
+	# get cards
+	nids = mw.col.findCards(kanjiDeckSearchTerm)
+	# for each card NID
+	for n in nids:
+		# array[kanji] = nid
+		note = mw.col.getCard(n).note()
+		# put the IDS into an array, perhaps can do the cards directly?
+		kanjiCardsIndex[extractKanji(note[kanjiCardKanjiField])[0]] = n
+	print len(kanjiCardsIndex)
+	return
 
 
-def readVocabfile():
-	with open(DATA_PATH, 'r') as f:
-		content = f.read().splitlines()
+
+# nid will be the vocab from the browser or the one selected card
+def addKanjiWordsVocab_bulk(nid):
+	mw.checkpoint("Add vocab to kanji cards")
+	try:
+		mw.progress.start()
+		# For each seleccted card
 		
-	for line in content:
-		fieldhash = dict(zip(('exp', 'reading', 'meaning', 'grade'),
-							line.split('\t')))
-		#extract kanji from keyword
-		kanjis = extractKanji(fieldhash['exp'].decode('utf8'))
-		for kanji in kanjis:
-			vocabIndex[kanji].append(fieldhash)
+		
+		# now for each kanji card
+		for id in kanjiCardsIndex:
+			# look up card from the kanji hash array
+			
+			# get the kanji note
+			kanjiNote = mw.col.getCard(kanjiCardsIndex[id]).note()
+			
+			# do the note and handle the results
+			if False == doNote(kanjiNote):
+				return flag
+		
+		return True
 	
+	except KeyError, e:
+		
+		mw.hDialog = hDialog = QMessageBox()
+		hDialog.setText("Please make sure that these fields exist" + e)
+		hDialog.exec_()
+
+	finally:
+		mw.progress.finish()
+		mw.reset()
+		return False
+	
+# This will happen on every 'add card'
+def addKanjiWordsVocab_onFocusLost(flag, note, fidx):
+			 
+	try:
+	
+	   # If event not coming from src field then cancel
+		if fidx != note._fmap[expField][0]:
+			return flag
+		
+		if vocabCardEnglish not in note or vocabCardJapanese not in note:
+			return flag
+		
+		
+		# extract kanji from the vocabCardJapanese field
+		kanjiz = extractKanji(note[vocabCardJapanese])
+		
+		# for each kanji in the word
+		for k in kanjiz:
+			# look up card from the kanji hash array
+			# if it doesn't exist then continue with next kanjiz
+			if k not in kanjiCardsIndex:
+				continue
+			# get the kanji note
+			kanjiNote = mw.col.getCard(kanjiCardsIndex[k]).note()
+			
+			# do the note and handle the results
+			if False == doNote(kanjiNote):
+				return flag
+		
+		return True
+	except None, e:
+		raise e
+		return flag
+	
+	
+def doNote(note):
+	# this is a kanji note
+	separator = '<br>'
+	try:
+		# extract the 1 kanji
+		theKanji = extractKanji(note[kanjiCardKanjiField])[0]
+		
+		# get vocab cards using this kanji
+		searchTerm = vocabDeckSearchTerm + " '" + vocabCardJapanese + ':' + """*""" + theKanji + """*'""" 
+		nids = mw.col.findNotes(searchTerm)
+			
+		vocabs = []
+		for nid in nids :
+			# create string using the japanese and english vocabCardJapanese vocabCardEnglish
+			vocabNote = mw.col.getNote(nid)
+			vocabs.append(vocabNote[vocabCardJapanese] + " <br> " + vocabNote[vocabCardEnglish])
+			
+		outstr = separator.join(vocabs)
+		outstr = outstr.replace(theKanji, "_")
+		
+		
+		# append string to the kanjiCardVocabField field
+		note[kanjiCardVocabField] = outstr
+		# flush the kanji note
+		note.flush()
+		return True
+	except None, e:
+		raise e
+		return False
+
+##########################################################################
+
+
+def extractKanji(exp):
+	# Get only the kanji
+	words = re.findall(ur'[\u4e00-\u9fbf]', exp)
+	return words
 
 
 ##########################################################################
 
-def addJPVocab(nids):
-
-	vocabIndex.clear()
-	readVocabfile()
-	
-	
-	fields = []
-	
-	anote=mw.col.getNote(nids[0])
-	#get the fields of the first note
-	for (i, f) in anote.items():
-		fields.append(i)
-	
-	#get input/output fields from user
-	src = addinfofuncts.getKeyFromList("Select field to read from", "Read relevant kanji/expression from:", fields)
-	if (src is None):
-		return
-	
-		#get input/output fields from user
-	dst = addinfofuncts.getKeyFromList("Select field to write to", "Write JLPT vocabulary to:", fields)
-	if (dst is None):
-		return
-	
-	
-	mw.checkpoint("Add JPVocab")
-	mw.progress.start()
-	#For each seleccted card
-	for nid in nids:
-		note = mw.col.getNote(nid)
-		srcTxt = mw.col.media.strip(note[src])
-		if not srcTxt.strip():
-			continue
-		#Add the data to the dst field
-		note[dst] = lookupVocab(srcTxt)
-		#if (note[dst] == ""):
-		#	note[dst] = note['Story']
-		note.flush()
-	mw.progress.finish()
-	mw.reset()
-	
-	
-	
-def extractKanji(exp):
-	#first get only the kanji
-	separator = ','
-	#Get only the kanji
-	words = re.findall(ur'[\u4e00-\u9fbf]',exp)
-	return words
-
-
 	
 def lookupVocab(wordsTxt):
-	#first get only the kanji
+	# first get only the kanji
 	separator = '<br>'
 	words = extractKanji(wordsTxt)
 	vocabs = []
@@ -127,4 +187,6 @@ def lookupVocab(wordsTxt):
 	return outstr
 		
 		
-
+addHook('profileLoaded', indexKanji)
+# Maybe change this to 'add card'
+addHook('editFocusLost', addKanjiWordsVocab_onFocusLost)

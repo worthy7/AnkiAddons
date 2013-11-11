@@ -19,12 +19,8 @@ from aqt import mw
 from aqt.utils import showInfo
 import sys
 import codecs
-import addinfofuncts
 
-import kanjidamageinfo
-import kanjistories
-import addjpvocab
-import addBestKanjiWord
+import addKanjiWordsVocab
 
 def getKeyFromList(titleText, labelText, strings):
         
@@ -42,36 +38,12 @@ def setupMenu(browser):
     
     browser.form.menuEdit.addSeparator()
     
-    kanjiExtrasMenu = browser.form.menuEdit.addMenu("Kanji Extras")
-    
-    a = QAction("Add KanjiDamage info", browser)
-    browser.connect(a, SIGNAL("triggered()"), lambda e=browser: onKDStories(e))
-    kanjiExtrasMenu.addAction(a)
-    
-    b = QAction("Add Extra Stories", browser)
-    browser.connect(b, SIGNAL("triggered()"), lambda e=browser: onExtraStories(e))
-    kanjiExtrasMenu.addAction(b)
-
-    d = QAction("Add JLPT Vocab", browser)
-    browser.connect(d, SIGNAL("triggered()"), lambda e=browser: onJPVocab(e))
-    kanjiExtrasMenu.addAction(d)
-    
-    f = QAction("Add Common Vocab", browser)
-    browser.connect(f, SIGNAL("triggered()"), lambda e=browser: onCommonVocab(e))
-    kanjiExtrasMenu.addAction(f)
+    a = QAction("Add this Vocab to Kanji Cards", browser)
+    browser.connect(a, SIGNAL("triggered()"), lambda e=browser: onAddKanjiVocab(e))
+    browser.form.menuEdit.addAction(a)
         
-def onKDStories(browser):
-    kanjidamageinfo.addKDStories(browser.selectedNotes())
-
-
-def onExtraStories(browser):
-    kanjistories.addExtraStories(browser.selectedNotes())
-
-def onJPVocab(browser):
-    addjpvocab.addJPVocab(browser.selectedNotes())
-    
-def onCommonVocab(browser):
-    addBestKanjiWord.addCommonVocab(browser.selectedNotes())
+def onAddKanjiVocab(browser):
+    addKanjiWordsVocab.addKanjiWordsVocab_bulk(browser.selectedNotes())
     
 addHook("browser.setupMenus", setupMenu)
 
